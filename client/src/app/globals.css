@@ -1,0 +1,109 @@
+/* apps/client/src/app/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg:       #FAF7F2;
+    --color-surface:  #F5F0E8;
+    --color-border:   #E8DFD2;
+    --color-text:     #3D2E22;
+    --color-muted:    #8C8378;
+    --color-accent:   #8FAF89;
+    --color-accent2:  #C8A97E;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    line-height: 1.15;
+  }
+
+  ::selection {
+    background-color: #D4E5D2;
+    color: #3D2E22;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #F5F0E8; }
+  ::-webkit-scrollbar-thumb { background: #C8A97E; border-radius: 3px; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-bark text-cream px-6 py-3 rounded-full font-body text-sm font-medium
+           tracking-wide transition-all duration-200
+           hover:bg-clay-400 hover:shadow-hover active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply border border-bark text-bark px-6 py-3 rounded-full font-body text-sm font-medium
+           tracking-wide transition-all duration-200
+           hover:bg-bark hover:text-cream active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply text-stone-400 px-4 py-2 rounded-full font-body text-sm
+           transition-all duration-200 hover:bg-cream-200 hover:text-bark;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl shadow-card overflow-hidden;
+  }
+
+  .input {
+    @apply w-full bg-cream-50 border border-cream-300 rounded-xl px-4 py-3
+           font-body text-sm text-bark placeholder-stone-400
+           focus:outline-none focus:ring-2 focus:ring-sage-300 focus:border-sage
+           transition-all duration-150;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-medium tracking-wide;
+  }
+
+  .section-title {
+    @apply font-display text-4xl md:text-5xl text-bark;
+  }
+
+  .section-subtitle {
+    @apply font-body text-sm text-stone-400 uppercase tracking-[0.2em];
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply bg-gradient-to-r from-cream-200 via-cream-100 to-cream-200 bg-[length:200%_100%]
+           animate-pulse rounded-xl;
+  }
+}
+
+@layer utilities {
+  .text-balance  { text-wrap: balance; }
+  .grain-overlay {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+}

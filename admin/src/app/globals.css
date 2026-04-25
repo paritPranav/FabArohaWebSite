@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  body { background: #FAF7F2; color: #3D2E22; font-family: 'DM Sans', sans-serif; }
+}
+@layer components {
+  .btn { @apply px-4 py-2 rounded-xl text-sm font-medium transition-all; }
+  .btn-primary { @apply btn bg-bark text-cream-100 hover:opacity-90; }
+  .btn-ghost   { @apply btn text-stone-500 hover:bg-cream-200; }
+  .input       { @apply w-full bg-white border border-cream-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sage; }
+  .label       { @apply block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1.5; }
+  .card        { @apply bg-white rounded-2xl shadow-sm border border-cream-200 p-5; }
+}
