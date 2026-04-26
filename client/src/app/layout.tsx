@@ -1,11 +1,12 @@
 // apps/client/src/app/layout.tsx
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://fabaroha.com'),
   title: {
     default: 'FabAroha — Style, Comfort & Elegance',
     template: '%s | FabAroha',
@@ -18,6 +19,9 @@ export const metadata: Metadata = {
     siteName: 'FabAroha',
     images: ['/og-image.jpg'],
   },
+}
+
+export const viewport: Viewport = {
   themeColor: '#FAF7F2',
 }
 

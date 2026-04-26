@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
+    "build": "echo \"Server uses plain JS — no build step required\"",
     "start": "node src/index.js"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 'use client'
 // apps/client/src/app/checkout/page.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { CreditCard, Truck, CheckCircle } from 'lucide-react'
@@ -24,8 +24,12 @@ export default function CheckoutPage() {
 
   const setAddr = (k: string, v: string) => setAddress(a => ({ ...a, [k]: v }))
 
-  if (!isAuthenticated) { router.push('/login'); return null }
-  if (items.length === 0) { router.push('/cart'); return null }
+  useEffect(() => {
+    if (!isAuthenticated) router.push('/login')
+    else if (items.length === 0) router.push('/cart')
+  }, [isAuthenticated, items.length, router])
+
+  if (!isAuthenticated || items.length === 0) return null
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault()

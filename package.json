@@ -1,0 +1,14 @@
+{
+  "name": "fab-aroha",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix client && npm run build --prefix admin && npm run build --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev:admin": "npm run dev --prefix admin",
+    "dev:server": "npm run dev --prefix server",
+    "start:client": "npm run start --prefix client",
+    "start:admin": "npm run start --prefix admin",
+    "start:server": "npm run start --prefix server"
+  }
+}
