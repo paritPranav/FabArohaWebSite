@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function CartPage() {
-  const { items, removeItem, updateQty, subtotal, total, shippingCharge, coupon, setCoupon } = useCartStore()
+  const { items, removeItem, updateQty, subtotal, total, coupon, setCoupon } = useCartStore()
   const [couponInput, setCouponInput] = useState('')
   const [applying, setApplying] = useState(false)
 
@@ -161,13 +161,9 @@ export default function CartPage() {
                 <span>Discount</span><span>-₹{coupon.discount.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between text-stone-400">
-              <span>Shipping</span>
-              <span>{shippingCharge() === 0 ? <span className="text-sage">Free</span> : `₹${shippingCharge()}`}</span>
+            <div className="flex justify-between text-sage">
+              <span>Delivery</span><span>Free</span>
             </div>
-            {shippingCharge() > 0 && (
-              <p className="text-2xs text-stone-400">Add ₹{(999 - (subtotal() - (coupon?.discount || 0))).toLocaleString()} more for free shipping</p>
-            )}
             <div className="flex justify-between font-medium text-bark text-base pt-3 border-t border-cream-300">
               <span>Total</span><span>₹{total().toLocaleString()}</span>
             </div>

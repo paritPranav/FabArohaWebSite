@@ -13,7 +13,7 @@ type PayMethod = 'razorpay' | 'cod'
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, subtotal, total, shippingCharge, coupon, clearCart } = useCartStore()
+  const { items, subtotal, total, coupon, clearCart } = useCartStore()
   const { user, isAuthenticated } = useAuthStore()
   const [payMethod, setPayMethod] = useState<PayMethod>('razorpay')
   const [loading, setLoading] = useState(false)
@@ -188,9 +188,8 @@ export default function CheckoutPage() {
             <div className="border-t border-cream-300 pt-4 space-y-2 text-sm">
               <div className="flex justify-between text-stone-400"><span>Subtotal</span><span>₹{subtotal().toLocaleString()}</span></div>
               {coupon && <div className="flex justify-between text-sage"><span>Discount</span><span>-₹{coupon.discount.toLocaleString()}</span></div>}
-              <div className="flex justify-between text-stone-400">
-                <span>Shipping</span>
-                <span>{shippingCharge() === 0 ? <span className="text-sage">Free</span> : `₹${shippingCharge()}`}</span>
+              <div className="flex justify-between text-sage">
+                <span>Delivery</span><span>Free</span>
               </div>
               <div className="flex justify-between font-medium text-base text-bark pt-3 border-t border-cream-300">
                 <span>Total</span><span>₹{total().toLocaleString()}</span>

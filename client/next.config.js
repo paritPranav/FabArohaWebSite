@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    minimumCacheTTL: 3600,          // cache optimized images for 1 hour
+    deviceSizes: [640, 828, 1080],  // only generate these widths (less memory)
+    imageSizes: [64, 128, 256],
     remotePatterns: [
       {
         protocol: 'https',

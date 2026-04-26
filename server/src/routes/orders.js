@@ -36,8 +36,8 @@ router.post('/', protect, async (req, res, next) => {
       }
     }
 
-    const shippingCharge = subtotal - discount >= 999 ? 0 : 99;
-    const totalAmount = subtotal - discount + shippingCharge;
+    const shippingCharge = 0;
+    const totalAmount = subtotal - discount;
 
     const order = await Order.create({
       user: req.user._id,

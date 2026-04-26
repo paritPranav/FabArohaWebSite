@@ -171,9 +171,8 @@ export default function OrderDetailPage() {
               <span>Discount</span><span>−₹{order.discount?.toLocaleString()}</span>
             </div>
           )}
-          <div className="flex justify-between text-stone-400">
-            <span>Shipping</span>
-            <span>{order.shippingCharge === 0 ? 'Free' : `₹${order.shippingCharge}`}</span>
+          <div className="flex justify-between text-sage">
+            <span>Delivery</span><span>Free</span>
           </div>
           <div className="flex justify-between font-semibold text-bark pt-1 border-t border-cream-200">
             <span>Total</span><span>₹{order.totalAmount?.toLocaleString()}</span>

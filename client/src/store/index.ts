@@ -58,7 +58,6 @@ interface CartStore {
   subtotal:   () => number
   total:      () => number
   itemCount:  () => number
-  shippingCharge: () => number
 }
 
 export const useCartStore = create<CartStore>()(
@@ -113,14 +112,9 @@ export const useCartStore = create<CartStore>()(
         )
       },
 
-      shippingCharge: () => {
-        const sub = get().subtotal() - (get().coupon?.discount ?? 0)
-        return sub >= 999 ? 0 : 99
-      },
-
       total: () => {
-        const { subtotal, coupon, shippingCharge } = get()
-        return subtotal() - (coupon?.discount ?? 0) + shippingCharge()
+        const { subtotal, coupon } = get()
+        return subtotal() - (coupon?.discount ?? 0)
       },
 
       itemCount: () => get().items.reduce((acc, i) => acc + i.quantity, 0),
