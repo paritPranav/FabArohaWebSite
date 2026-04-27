@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Heart, ShoppingBag, Star } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCartStore, useWishlistStore, useAuthStore } from '@/store'
 import { productAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -32,10 +33,10 @@ interface Props {
 }
 
 export default function ProductCard({ product, className }: Props) {
+  const router              = useRouter()
   const addItem             = useCartStore((s) => s.addItem)
   const { has, toggle }     = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
-  // Guard localStorage-backed state behind mounted to prevent hydration mismatch
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const isWishlisted = mounted && has(product._id)
@@ -75,19 +76,9 @@ export default function ProductCard({ product, className }: Props) {
     <motion.div
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className={clsx('group relative', className)}
+      onClick={() => router.push(`/products/${product.slug}`)}
+      className={clsx('group relative cursor-pointer', className)}
     >
-      {/*
-        Full-card invisible link — z-0, sits behind everything.
-        Buttons are z-10 siblings, so they intercept clicks first.
-        This avoids nesting <button> inside <a> (invalid HTML → hydration mismatch).
-      */}
-      <Link
-        href={`/products/${product.slug}`}
-        className="absolute inset-0 z-0"
-        aria-label={product.title}
-        tabIndex={-1}
-      />
 
       {/* ── Image ── */}
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-cream-200">
@@ -157,8 +148,8 @@ export default function ProductCard({ product, className }: Props) {
         </div>
       </div>
 
-      {/* ── Info — navigates via the full-card link above ── */}
-      <Link href={`/products/${product.slug}`} className="block mt-3 px-1 relative z-10">
+      {/* ── Info ── */}
+      <div className="mt-3 px-1">
         {product.collection && (
           <p className="text-2xs text-stone-400 uppercase tracking-widest mb-1">
             {product.collection.name}
@@ -207,7 +198,7 @@ export default function ProductCard({ product, className }: Props) {
             )}
           </div>
         )}
-      </Link>
+      </div>
     </motion.div>
   )
 }

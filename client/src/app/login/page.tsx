@@ -78,7 +78,7 @@ export default function LoginPage() {
               <div className="relative">
                 <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                 <input
-                  type="tel" placeholder="+91 98765 43210" required
+                  type="tel" placeholder="Enter mobile number" required
                   value={form.phone} onChange={e => set('phone', e.target.value)}
                   className="input pl-10"
                 />
@@ -87,12 +87,15 @@ export default function LoginPage() {
 
             {isRegister && (
               <div>
-                <label className="label">Email (optional)</label>
+                <label className="label">
+                  Email <span className="text-blush">*</span>
+                </label>
                 <input
-                  type="email" placeholder="your@email.com"
+                  type="email" placeholder="your@email.com" required
                   value={form.email} onChange={e => set('email', e.target.value)}
                   className="input"
                 />
+                <p className="text-xs text-stone-400 mt-1">Required to receive order confirmations & updates</p>
               </div>
             )}
 

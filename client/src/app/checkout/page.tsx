@@ -1,6 +1,6 @@
 'use client'
 // apps/client/src/app/checkout/page.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { CreditCard, Truck, CheckCircle } from 'lucide-react'
@@ -22,14 +22,19 @@ export default function CheckoutPage() {
     line1: '', line2: '', city: '', state: '', pincode: '', country: 'India',
   })
 
+  const [mounted, setMounted] = useState(false)
+  const orderPlaced = useRef(false)
+  useEffect(() => { setMounted(true) }, [])
+
   const setAddr = (k: string, v: string) => setAddress(a => ({ ...a, [k]: v }))
 
   useEffect(() => {
+    if (!mounted) return
     if (!isAuthenticated) router.push('/login')
-    else if (items.length === 0) router.push('/cart')
-  }, [isAuthenticated, items.length, router])
+    else if (items.length === 0 && !orderPlaced.current) router.push('/cart')
+  }, [mounted, isAuthenticated, items.length, router])
 
-  if (!isAuthenticated || items.length === 0) return null
+  if (!mounted || !isAuthenticated || (items.length === 0 && !orderPlaced.current)) return null
 
   const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,9 +54,10 @@ export default function CheckoutPage() {
       const order = data.order
 
       if (payMethod === 'cod') {
+        orderPlaced.current = true
         clearCart()
-        toast.success('Order placed successfully! 🎉')
-        router.push(`/profile/orders/${order._id}`)
+        toast.success('Order placed successfully!')
+        router.push('/discover')
         return
       }
 
@@ -69,9 +75,10 @@ export default function CheckoutPage() {
         handler: async (response: any) => {
           try {
             await paymentAPI.verify({ ...response, orderId: order._id })
+            orderPlaced.current = true
             clearCart()
-            toast.success('Payment successful! ✨')
-            router.push(`/profile/orders/${order._id}`)
+            toast.success('Payment successful!')
+            router.push('/discover')
           } catch { toast.error('Payment verification failed') }
         },
         prefill: { name: user?.name, contact: user?.phone, email: user?.email },

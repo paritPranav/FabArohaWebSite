@@ -23,7 +23,7 @@ export default function OrdersPage() {
   const [selected, setSelected]   = useState<any>(null)
   const [fullOrder, setFullOrder] = useState<any>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const [form, setForm] = useState({ orderStatus: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' })
+  const [form, setForm] = useState({ orderStatus: '', paymentStatus: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' })
   const [saving, setSaving] = useState(false)
 
   const load = (status?: string) => {
@@ -39,6 +39,7 @@ export default function OrdersPage() {
     setFullOrder(null)
     setForm({
       orderStatus:       o.orderStatus || 'placed',
+      paymentStatus:     o.paymentStatus || 'pending',
       trackingNumber:    o.trackingNumber  || '',
       trackingUrl:       o.trackingUrl     || '',
       estimatedDelivery: o.estimatedDelivery
@@ -199,6 +200,16 @@ export default function OrdersPage() {
                   onChange={e => setForm(f => ({...f, orderStatus: e.target.value}))}
                   className="input">
                   {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">Payment Status</label>
+                <select value={form.paymentStatus}
+                  onChange={e => setForm(f => ({...f, paymentStatus: e.target.value}))}
+                  className="input">
+                  {['pending','paid','failed','refunded'].map(s => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>
+                  ))}
                 </select>
               </div>
               <div>

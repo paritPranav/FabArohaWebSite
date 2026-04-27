@@ -73,7 +73,7 @@ export default function TrackOrderClient() {
               value={phone}
               onChange={e => setPhone(e.target.value)}
               className="input"
-              placeholder="10-digit number used at checkout"
+              placeholder="Enter mobile number"
               required
             />
           </div>

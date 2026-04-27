@@ -53,10 +53,15 @@ app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
+  // Standard JS Error has a stack; Razorpay/axios throw plain objects
+  if (err instanceof Error) {
+    console.error(err.stack);
+  } else {
+    console.error('[error]', JSON.stringify(err, null, 2));
+  }
+  res.status(err.status || err.statusCode || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error',
+    message: err.message || err?.error?.description || 'Internal Server Error',
   });
 });
 

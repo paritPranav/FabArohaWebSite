@@ -10,13 +10,18 @@ router.post('/register', async (req, res, next) => {
   try {
     const { name, phone, email, password } = req.body;
 
-    if (!name || !phone || !password) {
-      return res.status(400).json({ success: false, message: 'Name, phone and password are required' });
+    if (!name || !phone || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Name, phone, email and password are required' });
     }
 
     const existing = await User.findOne({ phone });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Phone number already registered' });
+    }
+
+    const emailTaken = await User.findOne({ email: email.toLowerCase() });
+    if (emailTaken) {
+      return res.status(409).json({ success: false, message: 'Email already registered' });
     }
 
     const user = await User.create({ name, phone, email, password });

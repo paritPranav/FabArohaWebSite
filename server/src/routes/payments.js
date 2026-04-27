@@ -6,18 +6,39 @@ const crypto   = require('crypto');
 const { protect } = require('../middleware/auth');
 const { Order } = require('../models/OrderCollection');
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 router.post('/create-order', protect, async (req, res, next) => {
   try {
     const { amount, orderId } = req.body;
-    const rzpOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId });
+
+    const keyId     = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+      console.error('[payments] Razorpay keys not configured in .env');
+      return res.status(500).json({ success: false, message: 'Payment gateway not configured' });
+    }
+
+    console.log('[payments] Using Razorpay key_id:', keyId);
+
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+
+    const rzpOrder = await razorpay.orders.create({
+      amount:   Math.round(amount * 100),
+      currency: 'INR',
+      receipt:  orderId,
+    });
+
     await Order.findByIdAndUpdate(orderId, { razorpayOrderId: rzpOrder.id });
     res.json({ success: true, rzpOrder });
-  } catch (err) { next(err); }
+  } catch (err) {
+    // Razorpay SDK throws plain objects, not Error instances
+    const rzpError = err?.error || err;
+    console.error('[payments] Razorpay create-order error:', JSON.stringify(rzpError, null, 2));
+    res.status(502).json({
+      success: false,
+      message: rzpError?.description || rzpError?.message || 'Payment gateway error. Please try again.',
+    });
+  }
 });
 
 router.post('/verify', protect, async (req, res, next) => {

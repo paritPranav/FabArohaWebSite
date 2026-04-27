@@ -3,6 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const mongoose = require('mongoose');
 const { protect, adminOnly } = require('../middleware/auth');
+const { sendOrderPlacedEmail, sendOrderStatusEmail } = require('../utils/email');
 
 // Lazy-load to avoid circular deps
 const getOrder = () => require('../models/OrderCollection').Order;
@@ -53,6 +54,12 @@ router.post('/', protect, async (req, res, next) => {
     });
 
     res.status(201).json({ success: true, order });
+
+    // Send confirmation email (non-blocking)
+    const User = require('../models/User');
+    User.findById(req.user._id).select('name email').then(user => {
+      sendOrderPlacedEmail(order, user);
+    }).catch(() => {});
   } catch (err) {
     next(err);
   }
@@ -201,16 +208,20 @@ router.get('/', protect, adminOnly, async (req, res, next) => {
 router.put('/:id/status', protect, adminOnly, async (req, res, next) => {
   try {
     const Order = getOrder();
-    const { orderStatus, trackingNumber, trackingUrl, estimatedDelivery } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { orderStatus, trackingNumber, trackingUrl, estimatedDelivery },
-      { new: true }
-    );
+    const { orderStatus, paymentStatus, trackingNumber, trackingUrl, estimatedDelivery } = req.body;
+    const update = { orderStatus, trackingNumber, trackingUrl, estimatedDelivery };
+    if (paymentStatus) update.paymentStatus = paymentStatus;
+    const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true });
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     res.json({ success: true, order });
+
+    // Send status update email (non-blocking)
+    const User = require('../models/User');
+    User.findById(order.user).select('name email').then(user => {
+      sendOrderStatusEmail(order, user);
+    }).catch(() => {});
   } catch (err) {
     next(err);
   }

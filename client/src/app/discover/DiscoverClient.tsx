@@ -1,7 +1,7 @@
 'use client'
 // apps/client/src/app/discover/DiscoverClient.tsx
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { motion, useMotionValue, useTransform, animate, PanInfo } from 'framer-motion'
+import { motion, useMotionValue, useTransform, animate, AnimatePresence, PanInfo } from 'framer-motion'
 import { Heart, X, RotateCcw, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -162,6 +162,66 @@ function SwipeCard({
   )
 }
 
+// ── Swipe Guidance Overlay ────────────────────────────────────────────────────
+function SwipeGuide({ onDismiss }: { onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 3200)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-50 flex items-center justify-center rounded-[2rem] bg-bark/60 backdrop-blur-sm"
+      onClick={onDismiss}
+    >
+      <div className="flex flex-col items-center gap-6 px-6 text-center">
+        {/* Animated hand */}
+        <motion.div
+          animate={{ x: [0, 60, 0, -60, 0] }}
+          transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity }}
+          className="text-4xl select-none"
+        >
+          👆
+        </motion.div>
+
+        {/* Left / Right labels */}
+        <div className="flex items-center gap-8">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-col items-center gap-1.5"
+          >
+            <div className="w-12 h-12 rounded-full bg-blush/90 flex items-center justify-center">
+              <X size={22} className="text-white" strokeWidth={2.5} />
+            </div>
+            <p className="text-xs text-white font-medium">Discard</p>
+          </motion.div>
+
+          <p className="text-white/50 text-xs">swipe</p>
+
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-col items-center gap-1.5"
+          >
+            <div className="w-12 h-12 rounded-full bg-sage/90 flex items-center justify-center">
+              <Heart size={22} className="text-white" strokeWidth={2.5} />
+            </div>
+            <p className="text-xs text-white font-medium">Wishlist</p>
+          </motion.div>
+        </div>
+
+        <p className="text-white/60 text-xs">Tap anywhere to start</p>
+      </div>
+    </motion.div>
+  )
+}
+
 // ── Main discover client ───────────────────────────────────────────────────────
 export default function DiscoverClient() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -169,6 +229,7 @@ export default function DiscoverClient() {
   const [loading, setLoading]           = useState(true)
   const [forceSwipe, setForceSwipe]     = useState<'left' | 'right' | null>(null)
   const [isSwiping, setIsSwiping]       = useState(false)
+  const [showGuide, setShowGuide]       = useState(true)
   const { toggle, has } = useWishlistStore()
 
   useEffect(() => {
@@ -177,13 +238,17 @@ export default function DiscoverClient() {
       const trending = products.filter(p => p.isTrending)
       const featured = products.filter(p => p.isFeatured && !p.isTrending)
       const rest     = products.filter(p => !p.isTrending && !p.isFeatured)
-      // shuffle the rest for variety
       const shuffled = [...rest].sort(() => Math.random() - 0.5)
       setAllProducts([...trending, ...featured, ...shuffled])
     }).finally(() => setLoading(false))
   }, [])
 
+  const dismissGuide = useCallback(() => {
+    setShowGuide(false)
+  }, [])
+
   const handleSwipe = useCallback((dir: 'left' | 'right') => {
+    dismissGuide()
     const product = allProducts[currentIndex]
     if (dir === 'right' && product) {
       if (!has(product._id)) {
@@ -266,7 +331,7 @@ export default function DiscoverClient() {
           {/* ── Card stack ── */}
           <div className="relative h-[460px] sm:h-[520px] mb-6">
             {visibleCards.map((product) => {
-              const stackIndex = visibleSlice.indexOf(product) // 0 = top
+              const stackIndex = visibleSlice.indexOf(product)
               const isTop = stackIndex === 0
               return (
                 <SwipeCard
@@ -279,6 +344,10 @@ export default function DiscoverClient() {
                 />
               )
             })}
+            {/* Swipe guidance — shown on first visit */}
+            <AnimatePresence>
+              {showGuide && <SwipeGuide onDismiss={dismissGuide} />}
+            </AnimatePresence>
           </div>
 
           {/* Counter */}

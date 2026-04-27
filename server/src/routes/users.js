@@ -28,7 +28,7 @@ router.get('/', protect, adminOnly, async (req, res, next) => {
 router.get('/wishlist', protect, async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
-      .populate('wishlist', 'title price images slug discountedPrice');
+      .populate('wishlist', 'title price images slug discountedPrice sizes isTrending rating numReviews colors collection');
     res.json({ success: true, wishlist: user.wishlist });
   } catch (err) { next(err); }
 });
