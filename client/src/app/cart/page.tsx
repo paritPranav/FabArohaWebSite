@@ -1,32 +1,53 @@
 'use client'
 // apps/client/src/app/cart/page.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2, Plus, Minus, ArrowRight, Tag } from 'lucide-react'
+import { Trash2, Plus, Minus, ArrowRight, Tag, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCartStore } from '@/store'
 import { paymentAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
+interface PublicCoupon {
+  code: string
+  description?: string
+  discountType: 'percent' | 'flat'
+  discountValue: number
+  minOrderValue: number
+  maxDiscount?: number
+  expiresAt?: string
+}
+
 export default function CartPage() {
   const { items, removeItem, updateQty, subtotal, total, coupon, setCoupon } = useCartStore()
-  const [couponInput, setCouponInput] = useState('')
-  const [applying, setApplying] = useState(false)
+  const [couponInput, setCouponInput]     = useState('')
+  const [applying, setApplying]           = useState(false)
+  const [publicCoupons, setPublicCoupons] = useState<PublicCoupon[]>([])
+  const [showCoupons, setShowCoupons]     = useState(false)
 
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return
+  useEffect(() => {
+    paymentAPI.publicCoupons().then(r => setPublicCoupons(r.data.coupons || [])).catch(() => {})
+  }, [])
+
+  const applyCouponCode = async (code: string) => {
+    if (applying) return
     setApplying(true)
     try {
-      const res = await paymentAPI.validateCoupon({ code: couponInput, orderValue: subtotal() })
-      setCoupon({ code: couponInput.toUpperCase(), discount: res.data.discount })
-      toast.success(`Coupon applied! Saved ₹${res.data.discount}`)
+      const res = await paymentAPI.validateCoupon({ code, cartTotal: subtotal() })
+      const c = res.data.coupon
+      setCoupon({ code: c.code, discount: c.discount })
+      setCouponInput('')
+      setShowCoupons(false)
+      toast.success(`Coupon applied! You save ₹${c.discount.toLocaleString()}`)
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Invalid coupon')
     } finally {
       setApplying(false)
     }
   }
+
+  const handleApplyCoupon = () => applyCouponCode(couponInput.trim())
 
   if (items.length === 0) {
     return (
@@ -128,27 +149,82 @@ export default function CartPage() {
                 <div className="flex items-center gap-2 text-sage text-sm">
                   <Tag size={14} />
                   <span className="font-medium">{coupon.code}</span>
-                  <span className="text-xs">(-₹{coupon.discount})</span>
+                  <span className="text-xs">(-₹{(coupon.discount ?? 0).toLocaleString()})</span>
                 </div>
                 <button onClick={() => setCoupon(null)} className="text-xs text-stone-400 hover:text-bark">Remove</button>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <input
-                  value={couponInput}
-                  onChange={e => setCouponInput(e.target.value)}
-                  placeholder="Coupon code"
-                  className="input flex-1 py-2 text-xs uppercase"
-                  onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
-                />
-                <button
-                  onClick={handleApplyCoupon}
-                  disabled={applying}
-                  className="btn-outline py-2 px-3 text-xs"
-                >
-                  {applying ? '…' : 'Apply'}
-                </button>
-              </div>
+              <>
+                <div className="flex gap-2">
+                  <input
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                    placeholder="Enter coupon code"
+                    className="input flex-1 py-2 text-xs uppercase tracking-widest"
+                    onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={applying || !couponInput.trim()}
+                    className="btn-outline py-2 px-3 text-xs disabled:opacity-40"
+                  >
+                    {applying ? '…' : 'Apply'}
+                  </button>
+                </div>
+
+                {/* Public coupons toggle */}
+                {publicCoupons.length > 0 && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => setShowCoupons(v => !v)}
+                      className="flex items-center gap-1 text-xs text-sage hover:text-bark transition-colors"
+                    >
+                      {showCoupons ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      {showCoupons ? 'Hide coupons' : `View ${publicCoupons.length} available coupon${publicCoupons.length > 1 ? 's' : ''}`}
+                    </button>
+
+                    <AnimatePresence>
+                      {showCoupons && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.22 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-2 space-y-2">
+                            {publicCoupons.map(c => (
+                              <div key={c.code} className="flex items-center justify-between bg-cream-50 border border-cream-200 rounded-xl px-3 py-2.5 gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs font-bold text-bark tracking-wider">{c.code}</span>
+                                    <span className="text-xs text-sage font-medium">
+                                      {c.discountType === 'percent'
+                                        ? `${c.discountValue}% off${c.maxDiscount ? ` (max ₹${c.maxDiscount})` : ''}`
+                                        : `₹${c.discountValue} off`}
+                                    </span>
+                                  </div>
+                                  {c.description && <p className="text-2xs text-stone-400 truncate mt-0.5">{c.description}</p>}
+                                  {c.minOrderValue > 0 && (
+                                    <p className="text-2xs text-stone-400 mt-0.5">Min order ₹{c.minOrderValue.toLocaleString()}</p>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => applyCouponCode(c.code)}
+                                  disabled={applying}
+                                  className="flex-shrink-0 text-xs border border-sage text-sage rounded-lg px-2.5 py-1 hover:bg-sage hover:text-white transition-colors disabled:opacity-40"
+                                >
+                                  Apply
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -158,7 +234,7 @@ export default function CartPage() {
             </div>
             {coupon && (
               <div className="flex justify-between text-sage">
-                <span>Discount</span><span>-₹{coupon.discount.toLocaleString()}</span>
+                <span>Discount</span><span>-₹{(coupon.discount ?? 0).toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-sage">

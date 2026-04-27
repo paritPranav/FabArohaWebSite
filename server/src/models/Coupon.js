@@ -14,6 +14,7 @@ const couponSchema = new mongoose.Schema(
     userUsageLimit: { type: Number, default: 1 },   // per-user limit
     usedBy:         [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     isActive:       { type: Boolean, default: true },
+    isSecret:       { type: Boolean, default: false }, // hidden from public listing; only usable if you know the code
     expiresAt:      { type: Date },
   },
   { timestamps: true }

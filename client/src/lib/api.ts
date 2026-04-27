@@ -77,7 +77,8 @@ export const orderAPI = {
 export const paymentAPI = {
   createOrder:    (data: object) => api.post('/payments/create-order', data),
   verify:         (data: object) => api.post('/payments/verify', data),
-  validateCoupon: (data: object) => api.post('/payments/validate-coupon', data),
+  validateCoupon:  (data: object) => api.post('/coupons/validate', data),
+  publicCoupons:   ()             => api.get('/coupons/public'),
 }
 
 export const userAPI = {

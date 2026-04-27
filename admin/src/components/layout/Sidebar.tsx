@@ -2,7 +2,7 @@
 // apps/admin/src/components/layout/Sidebar.tsx
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, Layers, ShoppingBag, Users, LogOut, Sparkles, Star } from 'lucide-react'
+import { LayoutDashboard, Package, Layers, ShoppingBag, Users, LogOut, Sparkles, Star, Ticket } from 'lucide-react'
 import { useAdminStore } from '@/lib/store'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/dashboard/orders',      icon: ShoppingBag,     label: 'Orders' },
   { href: '/dashboard/users',        icon: Users,           label: 'Users' },
   { href: '/dashboard/testimonials', icon: Star,            label: 'Testimonials' },
+  { href: '/dashboard/coupons',      icon: Ticket,          label: 'Coupons' },
 ]
 
 export default function Sidebar() {

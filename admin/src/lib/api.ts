@@ -40,3 +40,4 @@ export const orderAPI     = { list: (p?: object) => api.get('/orders', { params:
 export const userAPI      = { list: (p?: object) => api.get('/users', { params: p }), get: (id: string) => api.get(`/users/${id}`), block: (id: string, v: boolean) => api.put(`/users/${id}/block`, { isBlocked: v }) }
 export const uploadAPI       = { presign: (d: object) => api.post('/upload/presign', d) }
 export const testimonialAPI  = { listAll: () => api.get('/testimonials/admin/all'), create: (d: object) => api.post('/testimonials', d), update: (id: string, d: object) => api.put(`/testimonials/${id}`, d), delete: (id: string) => api.delete(`/testimonials/${id}`) }
+export const couponAPI       = { list: () => api.get('/coupons'), create: (d: object) => api.post('/coupons', d), update: (id: string, d: object) => api.put(`/coupons/${id}`, d), delete: (id: string) => api.delete(`/coupons/${id}`) }

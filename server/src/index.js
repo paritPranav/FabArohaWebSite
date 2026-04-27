@@ -15,6 +15,7 @@ const userRoutes = require('./routes/users');
 const paymentRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
 const testimonialRoutes = require('./routes/testimonials');
+const couponRoutes      = require('./routes/coupons');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/users',       userRoutes);
 app.use('/api/payments',    paymentRoutes);
 app.use('/api/upload',        uploadRoutes);
 app.use('/api/testimonials',  testimonialRoutes);
+app.use('/api/coupons',       couponRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
