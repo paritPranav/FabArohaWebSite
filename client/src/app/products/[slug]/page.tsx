@@ -70,7 +70,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
     description: product.description ?? '',
     image: product.images ?? [],
     url,
-    sku: product._id,
+    sku: product.sku,
     brand: { '@type': 'Brand', name: 'FabAroha' },
     offers: {
       '@type': 'Offer',

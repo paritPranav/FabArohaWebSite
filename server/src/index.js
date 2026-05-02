@@ -16,6 +16,8 @@ const paymentRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
 const testimonialRoutes = require('./routes/testimonials');
 const couponRoutes      = require('./routes/coupons');
+const sitemapRoutes     = require('./routes/sitemap');
+const { startSitemapRefreshJob } = require('./jobs/sitemapRefresh');
 
 const app = express();
 
@@ -49,6 +51,7 @@ app.use('/api/payments',    paymentRoutes);
 app.use('/api/upload',        uploadRoutes);
 app.use('/api/testimonials',  testimonialRoutes);
 app.use('/api/coupons',       couponRoutes);
+app.use('/api/sitemap',      sitemapRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
@@ -68,4 +71,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  startSitemapRefreshJob();
+});
