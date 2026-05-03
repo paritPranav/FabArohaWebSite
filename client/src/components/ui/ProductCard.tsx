@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore, useWishlistStore, useAuthStore } from '@/store'
 import { productAPI } from '@/lib/api'
+import { analytics } from '@/lib/analytics'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -61,12 +62,14 @@ export default function ProductCard({ product, className }: Props) {
       quantity:  1,
       slug:      product.slug,
     })
+    analytics.addToCart({ _id: product._id, slug: product.slug, title: product.title, image: product.images?.[0], discountedPrice: product.discountedPrice, price: product.price })
     toast.success('Added to cart')
   }
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (!isWishlisted) analytics.wishlistAdd({ _id: product._id, slug: product.slug, title: product.title, images: product.images })
     toggle(product._id)
     if (isAuthenticated) productAPI.toggleWishlist(product._id).catch(() => {})
     toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist')

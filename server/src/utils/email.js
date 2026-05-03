@@ -179,6 +179,78 @@ function orderStatusHtml(order, userName) {
   `);
 }
 
+// ── Admin alert template ──────────────────────────────────────────────────────
+
+function adminOrderAlertHtml(order, user) {
+  const adminUrl = process.env.ADMIN_URL || 'http://localhost:3001';
+  const paymentLabel = order.paymentMethod === 'cod' ? '💵 Cash on Delivery' : '💳 Razorpay (Online)';
+  return baseTemplate(`
+    <h2 style="font-size:22px;color:#3D2E22;margin:0 0 4px;">🛍️ New Order Received!</h2>
+    <p style="font-size:14px;color:#9B8EA0;margin:0 0 24px;">
+      A new order has been placed on FabAroha.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:5px 0;">Order ID</td>
+        <td style="font-size:13px;font-weight:600;color:#3D2E22;text-align:right;font-family:monospace;">
+          #${order._id.toString().slice(-10).toUpperCase()}
+        </td>
+      </tr>
+      <tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:5px 0;">Customer</td>
+        <td style="font-size:13px;color:#3D2E22;text-align:right;">${user?.name || 'N/A'}</td>
+      </tr>
+      <tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:5px 0;">Phone</td>
+        <td style="font-size:13px;color:#3D2E22;text-align:right;">${user?.phone || 'N/A'}</td>
+      </tr>
+      <tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:5px 0;">Email</td>
+        <td style="font-size:13px;color:#3D2E22;text-align:right;">${user?.email || 'N/A'}</td>
+      </tr>
+      <tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:5px 0;">Payment</td>
+        <td style="font-size:13px;color:#3D2E22;text-align:right;">${paymentLabel}</td>
+      </tr>
+    </table>
+
+    <div style="background:#FAF7F2;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <p style="margin:0 0 10px;font-size:12px;color:#9B8EA0;text-transform:uppercase;letter-spacing:1px;">Items Ordered</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${itemRows(order.items)}
+      </table>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+      ${order.discount > 0 ? `<tr>
+        <td style="font-size:13px;color:#9B8EA0;padding:3px 0;">Discount</td>
+        <td style="font-size:13px;color:#8FAF89;text-align:right;">−&#8377;${order.discount.toLocaleString('en-IN')}</td>
+      </tr>` : ''}
+      <tr>
+        <td style="font-size:15px;font-weight:700;color:#3D2E22;padding:8px 0 0;border-top:1px solid #F0EBE3;">Order Total</td>
+        <td style="font-size:15px;font-weight:700;color:#3D2E22;text-align:right;padding:8px 0 0;border-top:1px solid #F0EBE3;">
+          &#8377;${order.totalAmount.toLocaleString('en-IN')}
+        </td>
+      </tr>
+    </table>
+
+    <div style="background:#FAF7F2;border-radius:12px;padding:14px 20px;margin-bottom:24px;font-size:13px;color:#3D2E22;">
+      <strong>Ship to:</strong><br/>
+      ${order.shippingAddress?.fullName || ''}<br/>
+      ${order.shippingAddress?.line1 || ''}${order.shippingAddress?.line2 ? ', ' + order.shippingAddress.line2 : ''}<br/>
+      ${order.shippingAddress?.city || ''}, ${order.shippingAddress?.state || ''} — ${order.shippingAddress?.pincode || ''}
+    </div>
+
+    <div style="text-align:center;">
+      <a href="${adminUrl}/dashboard/orders"
+        style="display:inline-block;background:#3D2E22;color:#FAF7F2;text-decoration:none;padding:14px 32px;border-radius:50px;font-size:14px;font-weight:600;">
+        View in Admin Panel
+      </a>
+    </div>
+  `);
+}
+
 // ── Send functions ────────────────────────────────────────────────────────────
 
 async function sendOrderPlacedEmail(order, user) {
@@ -217,4 +289,20 @@ async function sendOrderStatusEmail(order, user) {
   }
 }
 
-module.exports = { sendOrderPlacedEmail, sendOrderStatusEmail };
+async function sendAdminOrderNotification(order, user) {
+  const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || 'fabaroha@gmail.com';
+  try {
+    const transport = await getTransporter();
+    await transport.sendMail({
+      from:    FROM,
+      to:      adminEmail,
+      subject: `🛍️ New Order #${order._id.toString().slice(-10).toUpperCase()} — ₹${order.totalAmount.toLocaleString('en-IN')} | FabAroha`,
+      html:    adminOrderAlertHtml(order, user),
+    });
+    console.log(`[email] Admin order alert sent to ${adminEmail}`);
+  } catch (err) {
+    console.error('[email] Failed to send admin order alert:', err.message);
+  }
+}
+
+module.exports = { sendOrderPlacedEmail, sendOrderStatusEmail, sendAdminOrderNotification };

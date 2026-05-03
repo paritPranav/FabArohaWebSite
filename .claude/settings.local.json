@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/parit/Downloads/fab-aroha/earthwear/**)",
-      "Bash(powershell -Command \"Rename-Item -Path 'C:\\\\Users\\\\parit\\\\Downloads\\\\fab-aroha\\\\earthwear\\\\apps' -NewName 'FabArohaWebSite' -Force\")"
+      "Bash(powershell -Command \"Rename-Item -Path 'C:\\\\Users\\\\parit\\\\Downloads\\\\fab-aroha\\\\earthwear\\\\apps' -NewName 'FabArohaWebSite' -Force\")",
+      "Bash(npx tsc:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\parit\\Downloads\\fab-aroha\\earthwear"

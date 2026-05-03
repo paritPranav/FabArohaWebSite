@@ -3,7 +3,7 @@ const express = require('express');
 const router  = express.Router();
 const mongoose = require('mongoose');
 const { protect, adminOnly } = require('../middleware/auth');
-const { sendOrderPlacedEmail, sendOrderStatusEmail } = require('../utils/email');
+const { sendOrderPlacedEmail, sendOrderStatusEmail, sendAdminOrderNotification } = require('../utils/email');
 
 // Lazy-load to avoid circular deps
 const getOrder = () => require('../models/OrderCollection').Order;
@@ -55,11 +55,30 @@ router.post('/', protect, async (req, res, next) => {
 
     res.status(201).json({ success: true, order });
 
-    // Send confirmation email (non-blocking)
-    const User = require('../models/User');
-    User.findById(req.user._id).select('name email').then(user => {
+    // Non-blocking: emails + purchase analytics events
+    const User      = require('../models/User');
+    const Analytics = require('../models/Analytics');
+    const sessionId = req.headers['x-session-id'] || req.user._id.toString();
+
+    User.findById(req.user._id).select('name email phone').then(user => {
       sendOrderPlacedEmail(order, user);
+      sendAdminOrderNotification(order, user);
     }).catch(() => {});
+
+    // One analytics event per line-item so product-level stats are accurate
+    Promise.all(
+      order.items.map(item =>
+        Analytics.create({
+          event:        'purchase',
+          sessionId,
+          productId:    item.product,
+          productTitle: item.title,
+          productImage: item.image,
+          price:        item.price,
+          quantity:     item.quantity,
+        })
+      )
+    ).catch(() => {});
   } catch (err) {
     next(err);
   }

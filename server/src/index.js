@@ -17,6 +17,7 @@ const uploadRoutes = require('./routes/upload');
 const testimonialRoutes = require('./routes/testimonials');
 const couponRoutes      = require('./routes/coupons');
 const sitemapRoutes     = require('./routes/sitemap');
+const analyticsRoutes   = require('./routes/analytics');
 const { startSitemapRefreshJob } = require('./jobs/sitemapRefresh');
 
 const app = express();
@@ -52,6 +53,7 @@ app.use('/api/upload',        uploadRoutes);
 app.use('/api/testimonials',  testimonialRoutes);
 app.use('/api/coupons',       couponRoutes);
 app.use('/api/sitemap',      sitemapRoutes);
+app.use('/api/analytics',   analyticsRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));

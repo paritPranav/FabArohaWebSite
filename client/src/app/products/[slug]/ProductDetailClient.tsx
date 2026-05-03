@@ -6,6 +6,7 @@ import { Heart, ShoppingBag, Star, Truck, RotateCcw, Shield, Ruler, X, Share2, L
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore, useWishlistStore, useAuthStore } from '@/store'
 import { productAPI } from '@/lib/api'
+import { analytics } from '@/lib/analytics'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -36,6 +37,9 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
   const { has, toggle } = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
 
+  // Track product view once on mount
+  useEffect(() => { analytics.productView(product) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const isWishlisted = has(product._id)
   const discount = product.discountedPrice
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
@@ -56,13 +60,16 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
       quantity,
       slug: product.slug,
     })
+    analytics.addToCart({ _id: product._id, slug: product.slug, title: product.title, image: product.images[0], discountedPrice: product.discountedPrice, price: product.price }, quantity)
     toast.success('Added to bag ✨ 🛍️')
   }
 
   const handleWishlist = async () => {
+    const wasWishlisted = isWishlisted
     toggle(product._id)
+    if (!wasWishlisted) analytics.wishlistAdd({ _id: product._id, slug: product.slug, title: product.title, images: product.images })
     if (isAuthenticated) { try { await productAPI.toggleWishlist(product._id) } catch {} }
-    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist ♡')
+    toast.success(wasWishlisted ? 'Removed from wishlist' : 'Added to wishlist ♡')
   }
 
   const productUrl = `${SITE_URL}/products/${product.slug}`
