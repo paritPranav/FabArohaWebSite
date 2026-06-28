@@ -27,6 +27,11 @@ api.interceptors.response.use(r => r, err => {
 export default api
 export const authAPI      = { login: (d: object) => api.post('/auth/login', d) }
 export const productAPI   = { list: (p?: object) => api.get('/products', { params: p }), create: (d: object) => api.post('/products', d), update: (id: string, d: object) => api.put(`/products/${id}`, d), delete: (id: string) => api.delete(`/products/${id}`) }
+export const reviewAPI    = {
+  addAdmin:   (productId: string, d: object) => api.post(`/products/${productId}/review/admin`, d),
+  deleteReview:(productId: string, reviewId: string) => api.delete(`/products/${productId}/review/${reviewId}`),
+  getProduct: (productId: string) => api.get(`/products/${productId}`),
+}
 export const collectionAPI= {
   list:       ()                    => api.get('/collections'),
   listAll:    ()                    => api.get('/collections/admin/all'),
@@ -36,7 +41,15 @@ export const collectionAPI= {
   deactivate: (id: string)          => api.patch(`/collections/${id}/deactivate`),
   delete:     (id: string)          => api.delete(`/collections/${id}`),
 }
-export const orderAPI     = { list: (p?: object) => api.get('/orders', { params: p }), get: (id: string) => api.get(`/orders/${id}`), updateStatus: (id: string, d: object) => api.put(`/orders/${id}/status`, d), stats: () => api.get('/orders/admin/stats') }
+export const orderAPI     = {
+  list:         (p?: object)           => api.get('/orders', { params: p }),
+  get:          (id: string)           => api.get(`/orders/${id}`),
+  updateStatus: (id: string, d: object) => api.put(`/orders/${id}/status`, d),
+  stats:        ()                     => api.get('/orders/admin/stats'),
+  createOffline:(d: object)            => api.post('/orders/offline', d),
+  lookupCustomer:(phone: string)       => api.get('/orders/customer/lookup', { params: { phone } }),
+  invoiceUrl:   (id: string)           => `${api.defaults.baseURL}/orders/${id}/invoice`,
+}
 export const userAPI      = { list: (p?: object) => api.get('/users', { params: p }), get: (id: string) => api.get(`/users/${id}`), block: (id: string, v: boolean) => api.put(`/users/${id}/block`, { isBlocked: v }) }
 export const uploadAPI       = { presign: (d: object) => api.post('/upload/presign', d) }
 export const testimonialAPI  = { listAll: () => api.get('/testimonials/admin/all'), create: (d: object) => api.post('/testimonials', d), update: (id: string, d: object) => api.put(`/testimonials/${id}`, d), delete: (id: string) => api.delete(`/testimonials/${id}`) }

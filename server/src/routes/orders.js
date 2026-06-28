@@ -2,8 +2,10 @@
 const express = require('express');
 const router  = express.Router();
 const mongoose = require('mongoose');
+const bcrypt   = require('bcryptjs');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendOrderPlacedEmail, sendOrderStatusEmail, sendAdminOrderNotification } = require('../utils/email');
+const { generateInvoicePDF, generateInvoiceNumber } = require('../utils/invoice');
 
 // Lazy-load to avoid circular deps
 const getOrder = () => require('../models/OrderCollection').Order;
@@ -244,6 +246,149 @@ router.put('/:id/status', protect, adminOnly, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ── GET /api/orders/:id/invoice — download PDF invoice (owner or admin) ──────
+router.get('/:id/invoice', protect, async (req, res, next) => {
+  try {
+    const Order = getOrder();
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name phone email');
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const User = require('../models/User');
+    const user = await User.findById(order.user._id).select('name phone email').lean();
+
+    const pdfBuffer = await generateInvoicePDF(order.toObject ? order.toObject() : order, user);
+    const invoiceNo = generateInvoiceNumber(order);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Invoice-${invoiceNo}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/orders/offline (admin only) — create in-store order ────────────
+router.post('/offline', protect, adminOnly, async (req, res, next) => {
+  try {
+    const Order = getOrder();
+    const User  = require('../models/User');
+
+    const {
+      // Customer
+      customerPhone, customerEmail, customerName,
+      // Items
+      items,
+      // Address
+      shippingAddress,
+      // Pricing
+      couponCode, additionalDiscount, additionalDiscountName,
+      // Payment
+      paymentMethod, paymentStatus,
+      // Meta
+      notes,
+    } = req.body;
+
+    if (!customerPhone) return res.status(400).json({ success: false, message: 'Customer phone is required' });
+    if (!items || items.length === 0) return res.status(400).json({ success: false, message: 'At least one item is required' });
+
+    // ── Find or create customer ────────────────────────────────────────────
+    let customer = await User.findOne({ phone: customerPhone });
+
+    if (!customer) {
+      // Create new account for walk-in customer
+      const tempPassword = Math.random().toString(36).slice(-8); // 8-char temp password
+      const hashed       = await bcrypt.hash(tempPassword, 10);
+      customer = await User.create({
+        name:     customerName || 'Customer',
+        phone:    customerPhone,
+        email:    customerEmail || null,
+        password: hashed,
+        role:     'user',
+      });
+      console.log(`[offline-order] New customer created: ${customer._id} (${customerPhone})`);
+    }
+
+    // ── Calculate totals ───────────────────────────────────────────────────
+    let subtotal = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    let discount = 0;
+
+    if (couponCode) {
+      const Coupon = require('../models/Coupon');
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      if (coupon && (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+          subtotal >= (coupon.minOrderValue || 0) &&
+          (!coupon.usageLimit || coupon.usedCount < coupon.usageLimit)) {
+        discount = coupon.discountType === 'percent'
+          ? Math.min((subtotal * coupon.discountValue) / 100, coupon.maxDiscount || Infinity)
+          : coupon.discountValue;
+        coupon.usedCount += 1;
+        coupon.usedBy.push(customer._id);
+        await coupon.save();
+      }
+    }
+
+    const extraDiscount = Number(additionalDiscount) || 0;
+    const totalAmount   = Math.max(0, subtotal - discount - extraDiscount);
+
+    // ── Generate invoice number before saving ──────────────────────────────
+    const tempId       = new mongoose.Types.ObjectId();
+    const invoiceNum   = `FAB-${new Date().getFullYear().toString().slice(-2)}${String(new Date().getMonth() + 1).padStart(2,'0')}-${tempId.toString().slice(-6).toUpperCase()}`;
+
+    const order = await Order.create({
+      _id:                    tempId,
+      user:                   customer._id,
+      items,
+      shippingAddress:        shippingAddress || { fullName: customerName || customer.name, phone: customerPhone },
+      subtotal,
+      discount,
+      couponCode:             couponCode || undefined,
+      additionalDiscount:     extraDiscount,
+      additionalDiscountName: additionalDiscountName || undefined,
+      shippingCharge:         0,
+      totalAmount,
+      paymentMethod:          paymentMethod || 'cash',
+      paymentStatus:          paymentStatus || 'paid',
+      orderStatus:            'confirmed',
+      isOfflineOrder:         true,
+      createdBy:              req.user._id,
+      invoiceNumber:          invoiceNum,
+      notes,
+    });
+
+    res.status(201).json({ success: true, order, isNewCustomer: !customer.createdAt });
+
+    // Non-blocking: email + PDF
+    sendOrderPlacedEmail(order, customer).catch(() => {});
+    sendAdminOrderNotification(order, customer).catch(() => {});
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/orders/customer/lookup?phone=xxx (admin only) ───────────────────
+router.get('/customer/lookup', protect, adminOnly, async (req, res, next) => {
+  try {
+    const User = require('../models/User');
+    const { phone } = req.query;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone required' });
+
+    const user = await User.findOne({ phone }).select('name phone email _id').lean();
+    if (!user) return res.json({ success: true, found: false });
+
+    const Order = getOrder();
+    const orderCount = await Order.countDocuments({ user: user._id });
+    res.json({ success: true, found: true, user, orderCount });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

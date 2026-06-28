@@ -1,5 +1,6 @@
 // apps/server/src/utils/email.js
 const nodemailer = require('nodemailer');
+const { generateInvoicePDF, generateInvoiceNumber } = require('./invoice');
 
 const FROM = process.env.EMAIL_FROM || 'FabAroha <noreply@fabaroha.com>';
 
@@ -257,11 +258,27 @@ async function sendOrderPlacedEmail(order, user) {
   if (!user?.email) return;
   try {
     const transport = await getTransporter();
+
+    // Generate PDF invoice and attach it
+    let attachments = [];
+    try {
+      const pdfBuffer  = await generateInvoicePDF(order, user);
+      const invoiceNo  = generateInvoiceNumber(order);
+      attachments = [{
+        filename:    `Invoice-${invoiceNo}.pdf`,
+        content:     pdfBuffer,
+        contentType: 'application/pdf',
+      }];
+    } catch (pdfErr) {
+      console.error('[email] Failed to generate invoice PDF:', pdfErr.message);
+    }
+
     const info = await transport.sendMail({
-      from:    FROM,
-      to:      user.email,
-      subject: `Order Confirmed — #${order._id.toString().slice(-10).toUpperCase()} | FabAroha`,
-      html:    orderPlacedHtml(order, user.name || 'there'),
+      from:        FROM,
+      to:          user.email,
+      subject:     `Order Confirmed — #${order._id.toString().slice(-10).toUpperCase()} | FabAroha`,
+      html:        orderPlacedHtml(order, user.name || 'there'),
+      attachments,
     });
     const preview = nodemailer.getTestMessageUrl(info);
     if (preview) console.log(`[email] Preview URL: ${preview}`);

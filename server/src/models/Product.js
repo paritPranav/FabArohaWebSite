@@ -3,10 +3,13 @@ const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
   {
-    user:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    name:    { type: String, required: true },
-    rating:  { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true },
+    user:          { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // null for admin-added reviews
+    name:          { type: String, required: true },
+    rating:        { type: Number, required: true, min: 1, max: 5 },
+    comment:       { type: String, default: '' },
+    image:         { type: String },          // optional reviewer/product image (S3 URL)
+    isAdminReview: { type: Boolean, default: false },
+    reviewDate:    { type: Date },            // custom display date for admin reviews
   },
   { timestamps: true }
 );
@@ -51,6 +54,13 @@ const productSchema = new mongoose.Schema(
     material:    { type: String },
     careInstructions: { type: String },
     sizeChart:   { type: String },                    // S3 URL of size chart image
+    styleFor:    { type: String },                    // one-liner occasion: "Office Casual", "Beach Wedding", etc.
+    // ── Product spec attributes ───────────────────────────────────────────────
+    neckType:        { type: String },                // Round Neck, V-Neck, Collar, etc.
+    fitType:         { type: String },                // Regular Fit, Slim Fit, Oversized, etc.
+    pattern:         { type: String },                // Solid, Printed, Striped, Floral, etc.
+    sleeveType:      { type: String },                // Half Sleeve, Full Sleeve, Sleeveless, etc.
+    countryOfOrigin: { type: String, default: 'India' },
   },
   { timestamps: true }
 );

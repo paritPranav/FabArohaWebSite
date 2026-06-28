@@ -9,6 +9,9 @@ const collectionSchema = new mongoose.Schema(
     bannerImage: { type: String },
     products:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     isActive:    { type: Boolean, default: true },
+    tagline:      { type: String },                      // e.g. "Effortless bohemian elegance"
+    keyHighlights: [{ type: String }],                   // ["100% natural fabrics", "Limited edition"]
+    occasion:     { type: String },                      // "Perfect for beach weddings & summer parties"
     isDeleted:   { type: Boolean, default: false },
     deletedAt:   { type: Date },
     sortOrder:   { type: Number, default: 0 },
@@ -51,10 +54,16 @@ const orderSchema = new mongoose.Schema(
     shippingCharge:  { type: Number, default: 0 },
     totalAmount:     { type: Number, required: true },
 
-    paymentMethod:   { type: String, enum: ['razorpay', 'cod'], required: true },
+    paymentMethod:   { type: String, enum: ['razorpay', 'cod', 'cash', 'upi', 'card', 'bank_transfer'], required: true },
     paymentStatus:   { type: String, enum: ['pending','paid','failed','refunded'], default: 'pending' },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
+
+    // Offline / in-store order fields
+    isOfflineOrder:        { type: Boolean, default: false },
+    additionalDiscount:    { type: Number, default: 0 },
+    additionalDiscountName: { type: String },
+    createdBy:             { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // admin who created
 
     orderStatus:     {
       type: String,
@@ -74,6 +83,7 @@ const orderSchema = new mongoose.Schema(
     ],
 
     notes:           { type: String },
+    invoiceNumber:   { type: String },  // auto-generated invoice number
   },
   { timestamps: true }
 );

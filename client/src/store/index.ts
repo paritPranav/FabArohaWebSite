@@ -123,6 +123,19 @@ export const useCartStore = create<CartStore>()(
   )
 )
 
+// ── Buy Now Store (non-persisted — clears on page refresh) ───────────────────
+interface BuyNowStore {
+  item: CartItem | null
+  setItem: (item: CartItem) => void
+  clear:   () => void
+}
+
+export const useBuyNowStore = create<BuyNowStore>((set) => ({
+  item:    null,
+  setItem: (item) => set({ item }),
+  clear:   () => set({ item: null }),
+}))
+
 // ── Wishlist Store ─────────────────────────────────────────────────────────────
 interface WishlistStore {
   ids: string[]

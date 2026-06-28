@@ -1,8 +1,8 @@
 'use client'
 // apps/admin/src/app/dashboard/products/page.tsx
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Search, Copy, Ruler } from 'lucide-react'
-import { productAPI, uploadAPI } from '@/lib/api'
+import { Plus, Pencil, Trash2, Search, Copy, Ruler, Star, MessageSquare, X } from 'lucide-react'
+import { productAPI, uploadAPI, reviewAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import Image from 'next/image'
@@ -12,9 +12,11 @@ const ALL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
 const EMPTY = {
   title: '', description: '', price: '', discountedPrice: '',
   category: 'Women', sizes: [] as { label: string; stock: number }[],
+  colors: [] as { name: string; hex: string }[],
   images: [] as string[], material: '', careInstructions: '',
   isFeatured: false, isTrending: false, isActive: true,
   sizeChart: '' as string,
+  neckType: '', fitType: '', pattern: '', sleeveType: '', countryOfOrigin: 'India',
 }
 
 export default function ProductsPage() {
@@ -27,6 +29,19 @@ export default function ProductsPage() {
   const [search, setSearch]       = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadingChart, setUploadingChart] = useState(false)
+  const [newColorName, setNewColorName] = useState('')
+  const [newColorHex,  setNewColorHex]  = useState('#000000')
+
+  // ── Review modal state ─────────────────────────────────────────────────────
+  const [reviewModal, setReviewModal]         = useState(false)
+  const [reviewProduct, setReviewProduct]     = useState<any>(null)
+  const [reviewList,   setReviewList]         = useState<any[]>([])
+  const [reviewLoading, setReviewLoading]     = useState(false)
+  const [savingReview,  setSavingReview]      = useState(false)
+  const [uploadingReviewImg, setUploadingReviewImg] = useState(false)
+  const [reviewForm, setReviewForm] = useState({
+    name: '', rating: 5, comment: '', image: '', date: new Date().toISOString().slice(0, 10),
+  })
 
   const load = () => {
     setLoading(true)
@@ -36,10 +51,11 @@ export default function ProductsPage() {
   }
   useEffect(() => { load() }, [])
 
-  const openAdd  = () => { setEditing(null); setForm(EMPTY); setModal(true) }
+  const openAdd  = () => { setEditing(null); setForm(EMPTY); setNewColorName(''); setNewColorHex('#000000'); setModal(true) }
   const openEdit = (p: any) => {
     setEditing(p)
-    setForm({ ...p, price: String(p.price), discountedPrice: String(p.discountedPrice || ''), sizeChart: p.sizeChart || '' })
+    setForm({ ...p, price: String(p.price), discountedPrice: String(p.discountedPrice || ''), sizeChart: p.sizeChart || '', colors: p.colors || [] })
+    setNewColorName(''); setNewColorHex('#000000')
     setModal(true)
   }
 
@@ -83,6 +99,74 @@ export default function ProductsPage() {
   }
   const updateStock = (label: string, stock: number) => {
     setForm((f: any) => ({ ...f, sizes: f.sizes.map((s: any) => s.label === label ? { ...s, stock } : s) }))
+  }
+
+  const addColor = () => {
+    if (!newColorName.trim()) return
+    setForm((f: any) => ({ ...f, colors: [...(f.colors || []), { name: newColorName.trim(), hex: newColorHex }] }))
+    setNewColorName('')
+    setNewColorHex('#000000')
+  }
+  const removeColor = (i: number) => {
+    setForm((f: any) => ({ ...f, colors: f.colors.filter((_: any, j: number) => j !== i) }))
+  }
+
+  // ── Review modal ───────────────────────────────────────────────────────────
+  const openReviewModal = async (p: any) => {
+    setReviewProduct(p)
+    setReviewList([])
+    setReviewForm({ name: '', rating: 5, comment: '', image: '', date: new Date().toISOString().slice(0, 10) })
+    setReviewModal(true)
+    setReviewLoading(true)
+    try {
+      const { data } = await reviewAPI.getProduct(p._id)
+      setReviewList(data.product?.reviews || [])
+    } catch { toast.error('Failed to load reviews') }
+    finally { setReviewLoading(false) }
+  }
+
+  const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingReviewImg(true)
+    try {
+      const { data } = await uploadAPI.presign({ fileName: file.name, fileType: file.type, folder: 'reviews' })
+      await fetch(data.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
+      setReviewForm(f => ({ ...f, image: data.publicUrl }))
+      toast.success('Image uploaded')
+    } catch { toast.error('Upload failed') }
+    finally { setUploadingReviewImg(false); e.target.value = '' }
+  }
+
+  const handleAddReview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!reviewForm.name.trim()) { toast.error('Name is required'); return }
+    setSavingReview(true)
+    try {
+      const { data } = await reviewAPI.addAdmin(reviewProduct._id, {
+        name:    reviewForm.name.trim(),
+        rating:  reviewForm.rating,
+        comment: reviewForm.comment.trim(),
+        image:   reviewForm.image || undefined,
+        date:    reviewForm.date,
+      })
+      setReviewList(l => [...l, data.review])
+      setReviewForm({ name: '', rating: 5, comment: '', image: '', date: new Date().toISOString().slice(0, 10) })
+      // Update product rating shown in table
+      load()
+      toast.success('Review added')
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Error') }
+    finally { setSavingReview(false) }
+  }
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Delete this review?')) return
+    try {
+      await reviewAPI.deleteReview(reviewProduct._id, reviewId)
+      setReviewList(l => l.filter(r => r._id !== reviewId))
+      load()
+      toast.success('Review deleted')
+    } catch { toast.error('Error deleting review') }
   }
 
   // ── Save ────────────────────────────────────────────────────────────────────
@@ -172,6 +256,7 @@ export default function ProductsPage() {
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => openEdit(p)} title="Edit" className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-bark"><Pencil size={14} /></button>
                       <button onClick={() => handleDuplicate(p)} title="Duplicate" className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-sage"><Copy size={14} /></button>
+                      <button onClick={() => openReviewModal(p)} title="Manage Reviews" className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-sand"><MessageSquare size={14} /></button>
                       <button onClick={() => handleDelete(p._id)} title="Deactivate" className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-blush"><Trash2 size={14} /></button>
                     </div>
                   </td>
@@ -214,6 +299,57 @@ export default function ProductsPage() {
 
               {/* Care Instructions */}
               <div><label className="label">Care Instructions</label><input value={form.careInstructions || ''} onChange={e => setForm((f: any) => ({...f,careInstructions:e.target.value}))} className="input" placeholder="Machine wash cold, gentle cycle…" /></div>
+
+              {/* ── Product Spec Attributes ── */}
+              <div>
+                <p className="label mb-3 text-stone-500 uppercase tracking-wider text-xs">Product Specifications</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="label">Neck Type</label><input value={form.neckType || ''} onChange={e => setForm((f: any) => ({...f,neckType:e.target.value}))} className="input" placeholder="Round Neck, V-Neck, Collar…" /></div>
+                  <div><label className="label">Fit Type</label><input value={form.fitType || ''} onChange={e => setForm((f: any) => ({...f,fitType:e.target.value}))} className="input" placeholder="Regular Fit, Slim Fit, Oversized…" /></div>
+                  <div><label className="label">Pattern</label><input value={form.pattern || ''} onChange={e => setForm((f: any) => ({...f,pattern:e.target.value}))} className="input" placeholder="Solid, Printed, Striped, Floral…" /></div>
+                  <div><label className="label">Sleeve Type</label><input value={form.sleeveType || ''} onChange={e => setForm((f: any) => ({...f,sleeveType:e.target.value}))} className="input" placeholder="Half Sleeve, Full Sleeve, Sleeveless…" /></div>
+                  <div><label className="label">Country of Origin</label><input value={form.countryOfOrigin || 'India'} onChange={e => setForm((f: any) => ({...f,countryOfOrigin:e.target.value}))} className="input" placeholder="India" /></div>
+                </div>
+
+                {/* Colors */}
+                <div className="mt-4">
+                  <label className="label">Colors</label>
+                  {/* Existing colors */}
+                  {form.colors?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {form.colors.map((c: any, i: number) => (
+                        <div key={i} className="flex items-center gap-1.5 bg-cream-50 border border-cream-200 rounded-xl px-3 py-1.5">
+                          <span className="w-4 h-4 rounded-full border border-white shadow-sm flex-shrink-0" style={{ backgroundColor: c.hex }} />
+                          <span className="text-sm text-bark">{c.name}</span>
+                          <button type="button" onClick={() => removeColor(i)} className="text-stone-300 hover:text-blush ml-1 text-xs leading-none">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Add new color */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={newColorHex}
+                      onChange={e => setNewColorHex(e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-cream-300 cursor-pointer p-0.5 flex-shrink-0"
+                      title="Pick color"
+                    />
+                    <input
+                      value={newColorName}
+                      onChange={e => setNewColorName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addColor() } }}
+                      className="input flex-1"
+                      placeholder="Color name, e.g. Sage Green"
+                    />
+                    <button
+                      type="button"
+                      onClick={addColor}
+                      className="btn-primary px-4 py-2 text-sm flex-shrink-0"
+                    >Add</button>
+                  </div>
+                </div>
+              </div>
 
               {/* Toggles */}
               <div className="flex items-center gap-6">
@@ -316,6 +452,168 @@ export default function ProductsPage() {
             <div className="flex justify-end gap-3 mt-8">
               <button onClick={() => setModal(false)} className="btn btn-ghost">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="btn-primary px-6">{saving ? 'Saving…' : 'Save Product'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reviews Modal ── */}
+      {reviewModal && reviewProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-bark/30 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-display text-2xl text-bark">Reviews</h2>
+                <p className="text-sm text-stone-400 mt-0.5 truncate max-w-xs">{reviewProduct.title}</p>
+              </div>
+              <button onClick={() => setReviewModal(false)} className="w-9 h-9 rounded-full bg-cream-100 flex items-center justify-center text-stone-400 hover:bg-cream-200">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Add Review Form */}
+            <form onSubmit={handleAddReview} className="bg-cream-50 rounded-2xl p-5 mb-6 space-y-4">
+              <p className="text-sm font-semibold text-bark">Add Review</p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 md:col-span-1">
+                  <label className="label">Reviewer Name <span className="text-blush">*</span></label>
+                  <input
+                    required
+                    value={reviewForm.name}
+                    onChange={e => setReviewForm(f => ({ ...f, name: e.target.value }))}
+                    className="input"
+                    placeholder="Priya Sharma"
+                  />
+                </div>
+                <div>
+                  <label className="label">Review Date</label>
+                  <input
+                    type="date"
+                    value={reviewForm.date}
+                    onChange={e => setReviewForm(f => ({ ...f, date: e.target.value }))}
+                    className="input"
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                </div>
+              </div>
+
+              {/* Star rating */}
+              <div>
+                <label className="label">Rating <span className="text-blush">*</span></label>
+                <div className="flex gap-1 mt-1">
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setReviewForm(f => ({ ...f, rating: s }))}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        size={28}
+                        className={s <= reviewForm.rating ? 'text-sand fill-sand' : 'text-cream-300'}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm text-stone-400 self-center">{reviewForm.rating}/5</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Comment</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+                  className="input resize-none"
+                  rows={3}
+                  placeholder="Great quality, loved the fit…"
+                />
+              </div>
+
+              {/* Optional image */}
+              <div>
+                <label className="label">Reviewer Image <span className="text-stone-400 font-normal">(optional)</span></label>
+                {reviewForm.image ? (
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-cream-200">
+                      <Image src={reviewForm.image} alt="" fill className="object-cover" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReviewForm(f => ({ ...f, image: '' }))}
+                      className="text-xs text-stone-400 hover:text-blush"
+                    >Remove</button>
+                  </div>
+                ) : (
+                  <label className="flex items-center gap-2 cursor-pointer w-fit">
+                    <div className="w-14 h-14 rounded-full border-2 border-dashed border-cream-300 flex items-center justify-center hover:border-bark transition-colors">
+                      <span className="text-xl text-stone-300">+</span>
+                    </div>
+                    <span className="text-xs text-stone-400">{uploadingReviewImg ? 'Uploading…' : 'Upload photo'}</span>
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingReviewImg} onChange={handleReviewImageUpload} />
+                  </label>
+                )}
+              </div>
+
+              <button type="submit" disabled={savingReview} className="btn-primary px-6 py-2.5 text-sm">
+                {savingReview ? 'Adding…' : 'Add Review'}
+              </button>
+            </form>
+
+            {/* Existing reviews list */}
+            <div>
+              <p className="text-sm font-semibold text-bark mb-3">
+                Existing Reviews ({reviewList.length})
+              </p>
+              {reviewLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-cream-100 rounded-xl animate-pulse" />)}
+                </div>
+              ) : reviewList.length === 0 ? (
+                <p className="text-sm text-stone-400 italic py-6 text-center">No reviews yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {reviewList.map((r: any) => (
+                    <div key={r._id} className="flex items-start gap-3 bg-cream-50 rounded-2xl p-4">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-cream-200 flex-shrink-0 flex items-center justify-center text-stone-300 font-medium text-sm">
+                        {r.image
+                          ? <Image src={r.image} alt="" width={40} height={40} className="object-cover w-full h-full" />
+                          : r.name.charAt(0).toUpperCase()
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-bark">{r.name}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex">
+                                {[1,2,3,4,5].map(s => (
+                                  <Star key={s} size={11} className={s <= r.rating ? 'text-sand fill-sand' : 'text-cream-300'} />
+                                ))}
+                              </div>
+                              <span className="text-2xs text-stone-400">
+                                {new Date(r.reviewDate || r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                              {r.isAdminReview && (
+                                <span className="text-2xs bg-bark/10 text-bark px-1.5 py-0.5 rounded">admin</span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteReview(r._id)}
+                            className="p-1.5 rounded-lg text-stone-300 hover:text-blush hover:bg-blush-50 transition-colors flex-shrink-0"
+                            title="Delete review"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        {r.comment && <p className="text-xs text-stone-400 mt-1.5 leading-relaxed">{r.comment}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

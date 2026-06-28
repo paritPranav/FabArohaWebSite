@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle, Clock, Package, Truck, XCircle, ExternalLink, MapPin } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Package, Truck, XCircle, ExternalLink, MapPin, Star } from 'lucide-react'
 import { useAuthStore } from '@/store'
-import { orderAPI } from '@/lib/api'
+import { orderAPI, productAPI } from '@/lib/api'
+import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 const STATUS_STEPS = ['placed', 'confirmed', 'processing', 'shipped', 'delivered']
@@ -18,6 +19,114 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled:  'bg-blush-50 text-blush',
 }
 
+// ── Inline review widget for a single order item ────────────────────────────
+function ReviewWidget({ item }: { item: any }) {
+  const productId = item.product?._id || item.product
+  const [status, setStatus]       = useState<'checking'|'reviewed'|'prompt'|'form'>('checking')
+  const [existingRating, setExistingRating] = useState(0)
+  const [rating, setRating]       = useState(5)
+  const [comment, setComment]     = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [hovered, setHovered]     = useState(0)
+
+  useEffect(() => {
+    if (!productId) { setStatus('prompt'); return }
+    productAPI.myReview(productId)
+      .then(r => {
+        if (r.data.hasReviewed) {
+          setExistingRating(r.data.review?.rating || 0)
+          setStatus('reviewed')
+        } else {
+          setStatus('prompt')
+        }
+      })
+      .catch(() => setStatus('prompt'))
+  }, [productId])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!productId) return
+    setSubmitting(true)
+    try {
+      await productAPI.review(productId, { rating, comment })
+      setExistingRating(rating)
+      setStatus('reviewed')
+      toast.success('Review submitted! Thank you ✨')
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not submit review')
+    } finally { setSubmitting(false) }
+  }
+
+  if (status === 'checking') return null
+
+  if (status === 'reviewed') return (
+    <div className="mt-3 flex items-center gap-2 bg-sage-50 rounded-xl px-4 py-2.5">
+      <div className="flex">
+        {[1,2,3,4,5].map(s => (
+          <Star key={s} size={13} className={s <= existingRating ? 'text-sand fill-sand' : 'text-cream-300'} />
+        ))}
+      </div>
+      <span className="text-xs text-sage font-medium">You reviewed this product</span>
+    </div>
+  )
+
+  if (status === 'prompt') return (
+    <button
+      onClick={() => setStatus('form')}
+      className="mt-3 flex items-center gap-2 text-xs text-stone-400 hover:text-bark transition-colors group"
+    >
+      <div className="flex">
+        {[1,2,3,4,5].map(s => (
+          <Star key={s} size={13} className="text-cream-300 group-hover:text-sand transition-colors" />
+        ))}
+      </div>
+      <span className="underline underline-offset-2">Rate this product</span>
+    </button>
+  )
+
+  // form state
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 bg-cream-50 rounded-2xl p-4 space-y-3 border border-cream-200">
+      <p className="text-xs font-semibold text-bark">Write a Review</p>
+      {/* Star picker */}
+      <div className="flex items-center gap-1">
+        {[1,2,3,4,5].map(s => (
+          <button
+            key={s}
+            type="button"
+            onMouseEnter={() => setHovered(s)}
+            onMouseLeave={() => setHovered(0)}
+            onClick={() => setRating(s)}
+            className="focus:outline-none"
+          >
+            <Star
+              size={22}
+              className={(hovered || rating) >= s ? 'text-sand fill-sand' : 'text-cream-300'}
+            />
+          </button>
+        ))}
+        <span className="ml-1.5 text-xs text-stone-400">{rating}/5</span>
+      </div>
+      <textarea
+        value={comment}
+        onChange={e => setComment(e.target.value)}
+        placeholder="Share your experience… (optional)"
+        rows={2}
+        className="input resize-none text-sm"
+      />
+      <div className="flex gap-2">
+        <button type="submit" disabled={submitting} className="btn-primary py-2 px-5 text-xs">
+          {submitting ? 'Submitting…' : 'Submit'}
+        </button>
+        <button type="button" onClick={() => setStatus('prompt')} className="text-xs text-stone-400 hover:text-bark">
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ── Main order detail page ──────────────────────────────────────────────────
 export default function OrderDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -42,6 +151,7 @@ export default function OrderDetailPage() {
   if (!order) return null
 
   const currentStep = STATUS_STEPS.indexOf(order.orderStatus)
+  const isDelivered = order.orderStatus === 'delivered'
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-14">
@@ -136,27 +246,31 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      {/* Items */}
+      {/* Items — with review widget for delivered orders */}
       <div className="bg-white rounded-3xl border border-cream-200 shadow-soft p-6 mb-5">
         <h2 className="text-sm font-semibold text-bark uppercase tracking-widest mb-4 flex items-center gap-2">
           <Package size={14}/> Items
         </h2>
         <div className="divide-y divide-cream-100">
           {order.items?.map((item: any, i: number) => (
-            <div key={i} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-              <div className="w-14 h-16 rounded-xl overflow-hidden bg-cream-100 flex-shrink-0">
-                {(item.product?.images?.[0] || item.image) && (
-                  <img src={item.product?.images?.[0] || item.image} alt="" className="w-full h-full object-cover"/>
-                )}
+            <div key={i} className="py-4 first:pt-0 last:pb-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-16 rounded-xl overflow-hidden bg-cream-100 flex-shrink-0">
+                  {(item.product?.images?.[0] || item.image) && (
+                    <img src={item.product?.images?.[0] || item.image} alt="" className="w-full h-full object-cover"/>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-bark text-sm truncate">{item.product?.title || item.title}</p>
+                  <p className="text-xs text-stone-400 mt-0.5">Size: {item.size} · Qty: {item.quantity}</p>
+                  <p className="text-xs text-stone-400">₹{item.price?.toLocaleString()} each</p>
+                </div>
+                <p className="font-medium text-bark text-sm flex-shrink-0">
+                  ₹{(item.price * item.quantity)?.toLocaleString()}
+                </p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-bark text-sm truncate">{item.product?.title || item.title}</p>
-                <p className="text-xs text-stone-400 mt-0.5">Size: {item.size} · Qty: {item.quantity}</p>
-                <p className="text-xs text-stone-400">₹{item.price?.toLocaleString()} each</p>
-              </div>
-              <p className="font-medium text-bark text-sm flex-shrink-0">
-                ₹{(item.price * item.quantity)?.toLocaleString()}
-              </p>
+              {/* Review prompt — only for delivered orders */}
+              {isDelivered && <ReviewWidget item={item} />}
             </div>
           ))}
         </div>

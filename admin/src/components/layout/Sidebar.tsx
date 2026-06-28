@@ -2,7 +2,7 @@
 // apps/admin/src/components/layout/Sidebar.tsx
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, Layers, ShoppingBag, Users, LogOut, Sparkles, Star, Ticket, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, Package, Layers, ShoppingBag, Users, LogOut, Sparkles, Star, Ticket, BarChart2, ClipboardList, Shirt, Play } from 'lucide-react'
 import { useAdminStore } from '@/lib/store'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
@@ -15,7 +15,10 @@ const NAV = [
   { href: '/dashboard/orders',      icon: ShoppingBag,     label: 'Orders' },
   { href: '/dashboard/users',        icon: Users,           label: 'Users' },
   { href: '/dashboard/testimonials', icon: Star,            label: 'Testimonials' },
-  { href: '/dashboard/coupons',      icon: Ticket,          label: 'Coupons' },
+  { href: '/dashboard/coupons',          icon: Ticket,         label: 'Coupons' },
+  { href: '/dashboard/offline-order',    icon: ClipboardList,  label: 'Offline Order' },
+  { href: '/dashboard/virtual-wardrobe', icon: Shirt,          label: 'Virtual Wardrobe' },
+  { href: '/dashboard/slideshow',        icon: Play,           label: 'Slideshow' },
 ]
 
 export default function Sidebar() {
@@ -26,19 +29,19 @@ export default function Sidebar() {
 
   return (
     <aside className="w-60 min-h-screen bg-bark flex flex-col py-6 px-4 fixed top-0 left-0">
-      <div className="mb-8 px-2">
+      <div className="mb-4 px-2">
         <p className="font-display text-2xl text-cream-100">FabAroha</p>
         <div className="flex items-center gap-1 mt-0.5">
           <Sparkles size={10} className="text-sand opacity-70" />
           <p className="text-xs text-sand opacity-70 italic">Admin Panel</p>
         </div>
       </div>
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto scrollbar-hide">
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
-            <Link key={href} href={href} className={clsx('flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all', active ? 'bg-white/15 text-cream-100 font-medium' : 'text-cream-200 hover:bg-white/10 hover:text-cream-100')}>
-              <Icon size={17} />{label}
+            <Link key={href} href={href} className={clsx('flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all', active ? 'bg-white/15 text-cream-100 font-medium' : 'text-cream-200 hover:bg-white/10 hover:text-cream-100')}>
+              <Icon size={16} />{label}
             </Link>
           )
         })}

@@ -2,23 +2,25 @@
 // apps/client/src/app/products/[slug]/ProductDetailClient.tsx
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
-import { Heart, ShoppingBag, Star, Truck, RotateCcw, Shield, Ruler, X, Share2, Link2, Check } from 'lucide-react'
+import { Heart, ShoppingBag, Star, Truck, RotateCcw, Shield, Ruler, X, Share2, Link2, Check, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCartStore, useWishlistStore, useAuthStore } from '@/store'
+import { useCartStore, useWishlistStore, useAuthStore, useBuyNowStore } from '@/store'
 import { productAPI } from '@/lib/api'
 import { analytics } from '@/lib/analytics'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
+import { useRouter } from 'next/navigation'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://fabaroha.com'
 
-interface Review { _id: string; name: string; rating: number; comment: string; createdAt: string }
+interface Review { _id: string; name: string; rating: number; comment: string; image?: string; reviewDate?: string; createdAt: string }
 interface ProductDetail {
   _id: string; title: string; slug: string; description: string; price: number; discountedPrice?: number
   images: string[]; category: string; sizes: { label: string; stock: number }[]
   colors?: { name: string; hex: string }[]; rating?: number; numReviews?: number
   reviews?: Review[]; collection?: { name: string; slug: string }
   material?: string; careInstructions?: string; isTrending?: boolean; sizeChart?: string
+  neckType?: string; fitType?: string; pattern?: string; sleeveType?: string; countryOfOrigin?: string
 }
 
 export default function ProductDetailClient({ product }: { product: ProductDetail }) {
@@ -33,7 +35,9 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
   const [copied, setCopied]               = useState(false)
   const shareRef                          = useRef<HTMLDivElement>(null)
 
-  const addItem = useCartStore(s => s.addItem)
+  const router = useRouter()
+  const addItem   = useCartStore(s => s.addItem)
+  const setBuyNow = useBuyNowStore(s => s.setItem)
   const { has, toggle } = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
 
@@ -62,6 +66,23 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
     })
     analytics.addToCart({ _id: product._id, slug: product.slug, title: product.title, image: product.images[0], discountedPrice: product.discountedPrice, price: product.price }, quantity)
     toast.success('Added to bag ✨ 🛍️')
+  }
+
+  const handleBuyNow = () => {
+    if (!selectedSize) { toast.error('Please select a size'); return }
+    const sizeObj = product.sizes.find(s => s.label === selectedSize)
+    if (!sizeObj || sizeObj.stock < 1) { toast.error('Out of stock'); return }
+    setBuyNow({
+      productId:      product._id,
+      title:          product.title,
+      image:          product.images[0],
+      price:          product.price,
+      discountedPrice: product.discountedPrice,
+      size:           selectedSize,
+      quantity,
+      slug:           product.slug,
+    })
+    router.push('/quick-checkout')
   }
 
   const handleWishlist = async () => {
@@ -269,6 +290,12 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
               <ShoppingBag size={18} /> Add to Cart
             </button>
             <button
+              onClick={handleBuyNow}
+              className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full bg-sage text-white font-medium text-sm hover:bg-sage/90 active:scale-95 transition-all"
+            >
+              <Zap size={18} /> Buy Now
+            </button>
+            <button
               onClick={handleWishlist}
               className={clsx('w-14 h-14 rounded-full border-2 flex items-center justify-center transition-all',
                 isWishlisted ? 'bg-blush border-blush text-white' : 'border-cream-300 text-stone-400 hover:border-blush hover:text-blush')}
@@ -399,22 +426,98 @@ export default function ProductDetailClient({ product }: { product: ProductDetai
               ))}
             </div>
 
-            {tab === 'desc' && <p className="text-sm text-stone-400 leading-relaxed">{product.description}</p>}
+            {tab === 'desc' && (
+              <div className="space-y-5">
+                <p className="text-sm text-stone-400 leading-relaxed">{product.description}</p>
+
+                {/* Product spec attributes */}
+                {(() => {
+                  const specs: { label: string; value: string }[] = []
+                  if (product.material)        specs.push({ label: 'Made Of',           value: product.material })
+                  if (product.neckType)        specs.push({ label: 'Neck Type',         value: product.neckType })
+                  if (product.fitType)         specs.push({ label: 'Fit Type',          value: product.fitType })
+                  if (product.colors?.length)  specs.push({ label: 'Color',             value: product.colors.map(c => c.name).join(', ') })
+                  if (product.pattern)         specs.push({ label: 'Pattern',           value: product.pattern })
+                  if (product.sleeveType)      specs.push({ label: 'Sleeve Type',       value: product.sleeveType })
+                  if (product.careInstructions)specs.push({ label: 'Care Instructions', value: product.careInstructions })
+                  if (product.sizes?.length)   specs.push({ label: 'Available Sizes',   value: product.sizes.filter(s => s.stock > 0).map(s => s.label).join(', ') })
+                  if (product.countryOfOrigin) specs.push({ label: 'Country of Origin', value: product.countryOfOrigin })
+                  if (!specs.length) return null
+                  return (
+                    <div className="border border-cream-200 rounded-2xl overflow-hidden">
+                      {specs.map((s, i) => (
+                        <div
+                          key={s.label}
+                          className={clsx('flex text-sm', i % 2 === 0 ? 'bg-cream-50' : 'bg-white')}
+                        >
+                          <span className="w-40 flex-shrink-0 px-4 py-2.5 text-stone-500 font-medium border-r border-cream-200">{s.label}</span>
+                          <span className="px-4 py-2.5 text-stone-400">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
             {tab === 'care' && <p className="text-sm text-stone-400 leading-relaxed">{product.careInstructions || 'Machine wash cold. Gentle cycle. Do not bleach. Tumble dry low.'}</p>}
             {tab === 'reviews' && (
               <div className="space-y-6">
+                {/* Average rating summary */}
+                {!!product.numReviews && (
+                  <div className="flex items-center gap-5 bg-cream-50 rounded-2xl px-5 py-4 border border-cream-200">
+                    <div className="text-center">
+                      <p className="font-display text-4xl text-bark leading-none">{product.rating?.toFixed(1)}</p>
+                      <div className="flex justify-center mt-1.5">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} size={13} className={s <= Math.round(product.rating || 0) ? 'text-sand fill-sand' : 'text-cream-300'} />
+                        ))}
+                      </div>
+                      <p className="text-2xs text-stone-400 mt-1">{product.numReviews} review{product.numReviews !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      {[5,4,3,2,1].map(star => {
+                        const count = product.reviews?.filter(r => Math.round(r.rating) === star).length || 0
+                        const pct   = product.numReviews ? Math.round((count / product.numReviews) * 100) : 0
+                        return (
+                          <div key={star} className="flex items-center gap-2 text-2xs text-stone-400">
+                            <span className="w-3 text-right">{star}</span>
+                            <Star size={10} className="text-sand fill-sand flex-shrink-0" />
+                            <div className="flex-1 h-1.5 bg-cream-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-sand rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="w-6 text-right">{count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {product.reviews?.map(r => (
                   <div key={r._id} className="border-b border-cream-300 pb-5">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-sm text-bark">{r.name}</p>
-                      <p className="text-2xs text-stone-400">{new Date(r.createdAt).toLocaleDateString('en-IN')}</p>
+                    <div className="flex items-start gap-3">
+                      {/* Avatar / image */}
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-cream-200 flex-shrink-0 flex items-center justify-center text-stone-400 font-medium text-sm">
+                        {r.image
+                          ? <img src={r.image} alt={r.name} className="w-full h-full object-cover" />
+                          : r.name.charAt(0).toUpperCase()
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-sm text-bark">{r.name}</p>
+                          <p className="text-2xs text-stone-400 flex-shrink-0">
+                            {new Date(r.reviewDate || r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <div className="flex mt-0.5">
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={12} className={s <= r.rating ? 'text-sand fill-sand' : 'text-cream-300'} />
+                          ))}
+                        </div>
+                        {r.comment && <p className="text-sm text-stone-400 mt-2 leading-relaxed">{r.comment}</p>}
+                      </div>
                     </div>
-                    <div className="flex mt-1">
-                      {[1,2,3,4,5].map(s => (
-                        <Star key={s} size={12} className={s <= r.rating ? 'text-sand fill-sand' : 'text-cream-300'} />
-                      ))}
-                    </div>
-                    <p className="text-sm text-stone-400 mt-2">{r.comment}</p>
                   </div>
                 ))}
 

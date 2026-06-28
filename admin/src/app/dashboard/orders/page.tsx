@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { orderAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
-import { X, Truck, Package, MapPin } from 'lucide-react'
+import { X, Truck, Package, MapPin, FileText, Store } from 'lucide-react'
 
 const STATUSES = ['placed','confirmed','processing','shipped','delivered','cancelled']
 const STATUS_COLORS: Record<string,string> = {
@@ -25,6 +25,25 @@ export default function OrdersPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [form, setForm] = useState({ orderStatus: '', paymentStatus: '', trackingNumber: '', trackingUrl: '', estimatedDelivery: '' })
   const [saving, setSaving] = useState(false)
+
+  const downloadInvoice = async (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const token = (() => {
+        try { const raw = localStorage.getItem('fab-aroha-admin'); if (raw) { const { state } = JSON.parse(raw); return state?.token } } catch {}
+      })()
+      const url  = orderAPI.invoiceUrl(orderId)
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      if (!resp.ok) throw new Error('Failed')
+      const blob   = await resp.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a      = document.createElement('a')
+      a.href       = blobUrl
+      a.download   = `Invoice-${orderId.slice(-10).toUpperCase()}.pdf`
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a); URL.revokeObjectURL(blobUrl)
+    } catch { toast.error('Failed to download invoice') }
+  }
 
   const load = (status?: string) => {
     setLoading(true)
@@ -88,7 +107,7 @@ export default function OrdersPage() {
           <table className="w-full text-sm">
             <thead className="bg-cream-100 border-b border-cream-200">
               <tr>
-                {['Order ID','Customer','Items','Total','Payment','Status','Tracking','Actions'].map(h => (
+                {['Order ID','Customer','Items','Total','Payment','Status','Tracking','Actions','Invoice'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-medium text-stone-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -120,9 +139,22 @@ export default function OrdersPage() {
                     {o.trackingNumber || <span className="text-stone-300">—</span>}
                   </td>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => openDetail(o)} title="Update order & tracking"
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openDetail(o)} title="Update order & tracking"
+                        className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-bark">
+                        <Truck size={14}/>
+                      </button>
+                      {o.isOfflineOrder && (
+                        <span title="In-store order" className="p-1 rounded-lg text-sand">
+                          <Store size={13}/>
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <button onClick={e => downloadInvoice(o._id, e)} title="Download invoice PDF"
                       className="btn-ghost p-1.5 rounded-lg text-stone-400 hover:text-bark">
-                      <Truck size={14}/>
+                      <FileText size={14}/>
                     </button>
                   </td>
                 </tr>
@@ -232,11 +264,17 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setSelected(null)} className="btn btn-ghost">Cancel</button>
-              <button onClick={handleUpdate} disabled={saving} className="btn-primary px-6">
-                {saving ? 'Saving…' : 'Update Order'}
+            <div className="flex justify-between items-center mt-6">
+              <button onClick={e => downloadInvoice(selected._id, e)}
+                className="flex items-center gap-2 text-sm text-stone-500 hover:text-bark border border-cream-200 px-4 py-2 rounded-xl transition-colors">
+                <FileText size={14}/> Download Invoice
               </button>
+              <div className="flex gap-3">
+                <button onClick={() => setSelected(null)} className="btn btn-ghost">Cancel</button>
+                <button onClick={handleUpdate} disabled={saving} className="btn-primary px-6">
+                  {saving ? 'Saving…' : 'Update Order'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

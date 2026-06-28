@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Search, X, Eye, EyeOff, RefreshCw } from 'lucide-
 import { collectionAPI, productAPI, uploadAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
 
-const EMPTY = { name: '', description: '', bannerImage: '', isActive: true, sortOrder: 0, products: [] as string[] }
+const EMPTY = { name: '', description: '', bannerImage: '', isActive: true, sortOrder: 0, products: [] as string[], tagline: '', occasion: '', keyHighlights: '' }
 
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<any[]>([])
@@ -41,7 +41,11 @@ export default function CollectionsPage() {
   const openEdit = (c: any) => {
     setEditing(c)
     const productIds = (c.products || []).map((p: any) => (typeof p === 'object' ? p._id : p))
-    setForm({ ...c, products: productIds })
+    setForm({
+      ...c,
+      products: productIds,
+      keyHighlights: (c.keyHighlights || []).join(', '),
+    })
     setProductSearch(''); fetchProducts(); setModal(true)
   }
 
@@ -73,8 +77,14 @@ export default function CollectionsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      if (editing) { await collectionAPI.update(editing._id, form) }
-      else { await collectionAPI.create(form) }
+      const payload = {
+        ...form,
+        keyHighlights: form.keyHighlights
+          ? form.keyHighlights.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : [],
+      }
+      if (editing) { await collectionAPI.update(editing._id, payload) }
+      else { await collectionAPI.create(payload) }
       toast.success(editing ? 'Collection updated' : 'Collection created')
       setModal(false); load()
     } catch (err: any) {
@@ -140,6 +150,7 @@ export default function CollectionsPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-display text-xl text-bark truncate">{c.name}</p>
+                        {c.tagline && <p className="text-xs text-sage italic mt-0.5 line-clamp-1">"{c.tagline}"</p>}
                         <p className="text-xs text-stone-400 mt-1 line-clamp-2">{c.description}</p>
                         <p className="text-xs text-stone-500 mt-2 font-medium">{c.products?.length || 0} products</p>
                       </div>
@@ -248,6 +259,31 @@ export default function CollectionsPage() {
                     <input type="checkbox" checked={form.isActive} onChange={e => setForm((f:any)=>({...f,isActive:e.target.checked}))} className="accent-sage"/>
                     <span className="text-sm text-bark">Active</span>
                   </label>
+                </div>
+              </div>
+
+              {/* Slideshow / Exhibition fields */}
+              <div className="border-t border-cream-100 pt-4">
+                <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-3">Slideshow & Exhibition</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Tagline <span className="text-stone-300 font-normal">(one line — shown on intro slide)</span></label>
+                    <input value={form.tagline} onChange={e => setForm((f:any)=>({...f,tagline:e.target.value}))}
+                      placeholder="e.g. Effortless bohemian elegance for every season"
+                      className="input"/>
+                  </div>
+                  <div>
+                    <label className="label">Occasion / Wear For <span className="text-stone-300 font-normal">(where to wear)</span></label>
+                    <input value={form.occasion} onChange={e => setForm((f:any)=>({...f,occasion:e.target.value}))}
+                      placeholder="e.g. Beach weddings · Summer parties · Casual brunches"
+                      className="input"/>
+                  </div>
+                  <div>
+                    <label className="label">Key Highlights <span className="text-stone-300 font-normal">(comma-separated)</span></label>
+                    <input value={form.keyHighlights} onChange={e => setForm((f:any)=>({...f,keyHighlights:e.target.value}))}
+                      placeholder="100% natural fabrics, Limited edition, Handcrafted details"
+                      className="input"/>
+                  </div>
                 </div>
               </div>
 

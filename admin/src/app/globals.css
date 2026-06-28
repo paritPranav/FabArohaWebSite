@@ -13,3 +13,7 @@
   .label       { @apply block text-xs font-medium text-stone-400 uppercase tracking-widest mb-1.5; }
   .card        { @apply bg-white rounded-2xl shadow-sm border border-cream-200 p-5; }
 }
+@layer utilities {
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}

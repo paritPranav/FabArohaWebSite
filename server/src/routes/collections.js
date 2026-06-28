@@ -14,7 +14,7 @@ const PUBLIC_FILTER  = { isDeleted: { $ne: true } };
 router.get('/', async (req, res, next) => {
   try {
     const collections = await Collection.find(ACTIVE_FILTER)
-      .populate('products', 'title price images slug discountedPrice rating')
+      .populate('products', 'title price images slug discountedPrice rating styleFor category colors sizes')
       .sort('sortOrder')
       .lean();
     res.json({ success: true, collections });
@@ -27,7 +27,7 @@ router.get('/', async (req, res, next) => {
 router.get('/admin/all', protect, adminOnly, async (req, res, next) => {
   try {
     const collections = await Collection.find(PUBLIC_FILTER)
-      .populate('products', 'title price images slug discountedPrice')
+      .populate('products', 'title price images slug discountedPrice styleFor category colors sizes')
       .sort('sortOrder')
       .lean();
     res.json({ success: true, collections });
@@ -51,7 +51,7 @@ router.put('/:id', protect, adminOnly, async (req, res, next) => {
     // Strip immutable fields
     const { _id, __v, createdAt, ...update } = req.body;
     const collection = await Collection.findByIdAndUpdate(req.params.id, { $set: update }, { new: true })
-      .populate('products', 'title price images slug discountedPrice');
+      .populate('products', 'title price images slug discountedPrice styleFor category colors sizes');
     if (!collection) return res.status(404).json({ success: false, message: 'Not found' });
     res.json({ success: true, collection });
   } catch (err) { next(err); }

@@ -45,6 +45,13 @@ export const authAPI = {
   updateProfile: (d: object)=> api.put('/auth/profile', d),
   addAddress: (d: object)   => api.post('/auth/address', d),
   deleteAddress: (id: string)=> api.delete(`/auth/address/${id}`),
+  // Firebase Phone OTP: exchange Firebase ID token for our JWT
+  firebaseVerify: (data: { idToken: string; name?: string }) => api.post('/auth/firebase-verify', data),
+  // Custom OTP (no reCAPTCHA)
+  sendOtp:   (data: { phone: string })                                    => api.post('/auth/send-otp', data),
+  verifyOtp: (data: { phone: string; otp: string; name?: string; email?: string }) => api.post('/auth/verify-otp', data),
+  // Guest Buy Now — no OTP, creates/finds user by phone
+  guestCheckout: (data: { name: string; phone: string; email?: string }) => api.post('/auth/guest-checkout', data),
 }
 
 export const productAPI = {
@@ -54,6 +61,7 @@ export const productAPI = {
   update:  (id: string, data: object) => api.put(`/products/${id}`, data),
   delete:  (id: string)      => api.delete(`/products/${id}`),
   review:  (id: string, data: object) => api.post(`/products/${id}/review`, data),
+  myReview:(id: string)      => api.get(`/products/${id}/my-review`),
   toggleWishlist: (id: string) => api.post(`/products/${id}/wishlist`),
 }
 

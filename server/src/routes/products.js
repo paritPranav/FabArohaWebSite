@@ -135,7 +135,7 @@ router.post('/:id/review', protect, async (req, res, next) => {
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
     // Check if user already reviewed
-    const existing = product.reviews.find(r => r.user.toString() === req.user._id.toString());
+    const existing = product.reviews.find(r => r.user && r.user.toString() === req.user._id.toString());
     if (existing) {
       return res.status(400).json({ success: false, message: 'You already reviewed this product' });
     }
@@ -145,6 +145,66 @@ router.post('/:id/review', protect, async (req, res, next) => {
     await product.save();
 
     res.status(201).json({ success: true, message: 'Review added' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/products/:id/review/admin ───────────────────────────────────
+// Admin: add a fake/curated review with custom name, date, optional image
+router.post('/:id/review/admin', protect, adminOnly, async (req, res, next) => {
+  try {
+    const { name, rating, comment, image, date } = req.body;
+    if (!name || !rating) {
+      return res.status(400).json({ success: false, message: 'Name and rating are required' });
+    }
+
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    product.reviews.push({
+      name:          name.trim(),
+      rating:        Number(rating),
+      comment:       comment || '',
+      image:         image || undefined,
+      isAdminReview: true,
+      reviewDate:    date ? new Date(date) : new Date(),
+    });
+    product.updateRating();
+    await product.save();
+
+    res.status(201).json({ success: true, review: product.reviews[product.reviews.length - 1] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── DELETE /api/products/:id/review/:reviewId ─────────────────────────────
+// Admin: delete any review
+router.delete('/:id/review/:reviewId', protect, adminOnly, async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    product.reviews = product.reviews.filter(r => r._id.toString() !== req.params.reviewId);
+    product.updateRating();
+    await product.save();
+
+    res.json({ success: true, message: 'Review deleted' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── GET /api/products/:id/my-review ──────────────────────────────────────
+// Check if the current user has already reviewed this product
+router.get('/:id/my-review', protect, async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id).select('reviews').lean();
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    const review = product.reviews.find(r => r.user && r.user.toString() === req.user._id.toString());
+    res.json({ success: true, hasReviewed: !!review, review: review || null });
   } catch (err) {
     next(err);
   }

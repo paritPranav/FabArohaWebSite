@@ -3,7 +3,16 @@
     "allow": [
       "Read(//c/Users/parit/Downloads/fab-aroha/earthwear/**)",
       "Bash(powershell -Command \"Rename-Item -Path 'C:\\\\Users\\\\parit\\\\Downloads\\\\fab-aroha\\\\earthwear\\\\apps' -NewName 'FabArohaWebSite' -Force\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(xargs grep:*)",
+      "Bash(nslookup _mongodb._tcp.cluster0.e9dl2.mongodb.net)",
+      "Bash(nslookup cluster0.e9dl2.mongodb.net)",
+      "Bash(curl -s https://api.ipify.org)",
+      "Bash(nslookup -type=SRV _mongodb._tcp.cluster0.e9dl2.mongodb.net 8.8.8.8)",
+      "Bash(nslookup -type=TXT cluster0.e9dl2.mongodb.net 8.8.8.8)",
+      "Bash(node scripts/auto-populate-styles.js)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const a = require\\('firebase-admin'\\); console.log\\(Object.keys\\(a\\)\\); console.log\\(a.apps\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\parit\\Downloads\\fab-aroha\\earthwear"
