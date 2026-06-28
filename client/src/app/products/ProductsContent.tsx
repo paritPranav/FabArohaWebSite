@@ -241,7 +241,7 @@ export default function ProductsContent() {
                   {Array.from({ length: Math.ceil(total / 16) }, (_, i) => i + 1).map(p => (
                     <button
                       key={p}
-                      onClick={() => setPage(p)}
+                      onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'instant' }) }}
                       className={clsx(
                         'w-10 h-10 rounded-full text-sm transition-all',
                         page === p ? 'bg-bark text-cream' : 'text-stone-400 hover:bg-cream-200'

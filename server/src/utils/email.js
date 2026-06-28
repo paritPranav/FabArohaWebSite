@@ -159,8 +159,8 @@ function orderStatusHtml(order, userName) {
     </div>
 
     <div style="background:#F0EBF6;border-left:4px solid #8FAF89;border-radius:8px;padding:14px 18px;margin-bottom:20px;">
-      <p style="margin:0;font-size:13px;font-weight:600;color:#3D2E22;text-transform:capitalize;">
-        Status: ${order.orderStatus}
+      <p style="margin:0;font-size:13px;font-weight:600;color:#3D2E22;">
+        Status: ${order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)}
       </p>
       <p style="margin:6px 0 0;font-size:13px;color:#5C4A3A;">${message}</p>
     </div>
@@ -295,7 +295,7 @@ async function sendOrderStatusEmail(order, user) {
     const info = await transport.sendMail({
       from:    FROM,
       to:      user.email,
-      subject: `Order Update: ${order.orderStatus} — #${order._id.toString().slice(-10).toUpperCase()} | FabAroha`,
+      subject: `Order Update: ${order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1)} — #${order._id.toString().slice(-10).toUpperCase()} | FabAroha`,
       html:    orderStatusHtml(order, user.name || 'there'),
     });
     const preview = nodemailer.getTestMessageUrl(info);

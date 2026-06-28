@@ -84,7 +84,7 @@ const COL_W       = PAGE_W - MARGIN * 2;
 // ── PDF helpers ───────────────────────────────────────────────────────────────
 
 function inr(n) {
-  return '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return 'Rs. ' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function drawHRule(doc, y, color = '#E8E0D6', width = COL_W) {

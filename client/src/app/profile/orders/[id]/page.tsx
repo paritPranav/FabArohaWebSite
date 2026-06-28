@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle, Package, Truck, XCircle, ExternalLink, MapPin, Star } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Package, Truck, XCircle, ExternalLink, MapPin, Star, PartyPopper, Copy } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { orderAPI, productAPI } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -207,6 +207,18 @@ export default function OrderDetailPage() {
         </div>
       )}
 
+      {isDelivered && (
+        <div className="bg-sage-50 border border-sage/20 rounded-2xl p-5 mb-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-sage flex items-center justify-center flex-shrink-0">
+            <PartyPopper size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="font-semibold text-bark">Order Delivered!</p>
+            <p className="text-sm text-stone-400 mt-0.5">Your order has arrived. We hope you love it! Share your experience by rating the items below.</p>
+          </div>
+        </div>
+      )}
+
       {order.orderStatus === 'cancelled' && (
         <div className="bg-blush-50 border border-blush-100 rounded-2xl p-4 mb-5 flex items-center gap-3">
           <XCircle size={20} className="text-blush flex-shrink-0"/>
@@ -301,11 +313,22 @@ export default function OrderDetailPage() {
             <MapPin size={14}/> Delivery Address
           </h2>
           <div className="text-sm text-stone-500 space-y-0.5">
-            {order.shippingAddress.name && <p className="font-medium text-bark">{order.shippingAddress.name}</p>}
+            {order.shippingAddress.fullName && <p className="font-medium text-bark">{order.shippingAddress.fullName}</p>}
             <p>{order.shippingAddress.line1}</p>
             {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
             <p>{order.shippingAddress.city}, {order.shippingAddress.state} — {order.shippingAddress.pincode}</p>
-            {order.shippingAddress.phone && <p className="pt-1 text-stone-400">{order.shippingAddress.phone}</p>}
+            {order.shippingAddress.phone && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="font-mono text-bark select-all">{order.shippingAddress.phone}</span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(order.shippingAddress.phone); toast.success('Number copied') }}
+                  className="text-stone-300 hover:text-sage transition-colors"
+                  title="Copy number"
+                >
+                  <Copy size={13} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

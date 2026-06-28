@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(node scripts/seed-reviews.js)",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\('framer-motion:', pkg.dependencies['framer-motion']\\)\")"
     ]
   }
 }

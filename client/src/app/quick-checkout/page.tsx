@@ -104,7 +104,6 @@ export default function QuickCheckoutPage() {
 
       if (payMethod === 'cod') {
         orderPlaced.current = true
-        clearBuyNow()
         router.push(`/order-success/${order._id}`)
         return
       }
@@ -124,7 +123,6 @@ export default function QuickCheckoutPage() {
           try {
             await paymentAPI.verify({ ...response, orderId: order._id })
             orderPlaced.current = true
-            clearBuyNow()
             router.push(`/order-success/${order._id}`)
           } catch {
             toast.error('Payment verification failed')
@@ -195,7 +193,7 @@ export default function QuickCheckoutPage() {
                       required
                       value={guestName}
                       onChange={e => setGuestName(e.target.value)}
-                      placeholder="Priya Sharma"
+                      placeholder="Enter your full name"
                       className="input"
                     />
                   </div>
@@ -210,7 +208,7 @@ export default function QuickCheckoutPage() {
                         maxLength={10}
                         value={guestPhone}
                         onChange={e => setGuestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        placeholder="98765 43210"
+                        placeholder="10-digit mobile number"
                         className="input flex-1"
                       />
                     </div>
@@ -221,7 +219,7 @@ export default function QuickCheckoutPage() {
                       type="email"
                       value={guestEmail}
                       onChange={e => setGuestEmail(e.target.value)}
-                      placeholder="priya@email.com"
+                      placeholder="your@email.com"
                       className="input"
                     />
                   </div>
@@ -241,11 +239,11 @@ export default function QuickCheckoutPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 md:col-span-1">
                   <label className="label">Full Name</label>
-                  <input required value={address.fullName} onChange={e => setAddr('fullName', e.target.value)} className="input" placeholder="Priya Sharma" />
+                  <input required value={address.fullName} onChange={e => setAddr('fullName', e.target.value)} className="input" placeholder="Full name" />
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="label">Phone</label>
-                  <input required value={address.phone} onChange={e => setAddr('phone', e.target.value)} className="input" placeholder="98765 43210" />
+                  <input required value={address.phone} onChange={e => setAddr('phone', e.target.value)} className="input" placeholder="Mobile number" />
                 </div>
                 <div className="col-span-2">
                   <label className="label">Address Line 1</label>
@@ -257,15 +255,15 @@ export default function QuickCheckoutPage() {
                 </div>
                 <div>
                   <label className="label">City</label>
-                  <input required value={address.city} onChange={e => setAddr('city', e.target.value)} className="input" placeholder="Mumbai" />
+                  <input required value={address.city} onChange={e => setAddr('city', e.target.value)} className="input" placeholder="City" />
                 </div>
                 <div>
                   <label className="label">State</label>
-                  <input required value={address.state} onChange={e => setAddr('state', e.target.value)} className="input" placeholder="Maharashtra" />
+                  <input required value={address.state} onChange={e => setAddr('state', e.target.value)} className="input" placeholder="State" />
                 </div>
                 <div>
                   <label className="label">Pincode</label>
-                  <input required value={address.pincode} onChange={e => setAddr('pincode', e.target.value)} className="input" placeholder="400001" maxLength={6} />
+                  <input required value={address.pincode} onChange={e => setAddr('pincode', e.target.value)} className="input" placeholder="6-digit pincode" maxLength={6} />
                 </div>
                 <div>
                   <label className="label">Country</label>

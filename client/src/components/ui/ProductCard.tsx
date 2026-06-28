@@ -2,11 +2,11 @@
 // apps/client/src/components/ui/ProductCard.tsx
 import Link from 'next/link'
 import Image from 'next/image'
-import { Heart, ShoppingBag, Star, Zap } from 'lucide-react'
+import { Heart, ShoppingBag, Star, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCartStore, useWishlistStore, useAuthStore, useBuyNowStore } from '@/store'
+import { useCartStore, useWishlistStore, useAuthStore } from '@/store'
 import { productAPI } from '@/lib/api'
 import { analytics } from '@/lib/analytics'
 import toast from 'react-hot-toast'
@@ -36,7 +36,6 @@ interface Props {
 export default function ProductCard({ product, className }: Props) {
   const router              = useRouter()
   const addItem             = useCartStore((s) => s.addItem)
-  const setBuyNow           = useBuyNowStore((s) => s.setItem)
   const { has, toggle }     = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
   const [mounted, setMounted] = useState(false)
@@ -67,21 +66,10 @@ export default function ProductCard({ product, className }: Props) {
     toast.success('Added to cart')
   }
 
-  const handleBuyNow = (e: React.MouseEvent) => {
+  const handleViewProduct = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!firstAvailableSize) return toast.error('Out of stock')
-    setBuyNow({
-      productId:      product._id,
-      title:          product.title,
-      image:          product.images?.[0] ?? '',
-      price:          product.price,
-      discountedPrice: product.discountedPrice,
-      size:           firstAvailableSize,
-      quantity:       1,
-      slug:           product.slug,
-    })
-    router.push('/quick-checkout')
+    router.push(`/products/${product.slug}`)
   }
 
   const handleWishlist = (e: React.MouseEvent) => {
@@ -158,20 +146,20 @@ export default function ProductCard({ product, className }: Props) {
           </button>
         </div>
 
-        {/* Quick Add + Buy Now */}
+        {/* Quick Add + View Product */}
         <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-10 flex">
           <button
             onClick={handleAddToCart}
             className="flex-1 bg-bark/90 backdrop-blur-sm text-cream text-sm py-3 flex items-center justify-center gap-1.5 hover:bg-bark transition-colors"
           >
-            <ShoppingBag size={13} /> Add
+            <ShoppingBag size={13} /> Add to Cart
           </button>
           <div className="w-px bg-white/20" />
           <button
-            onClick={handleBuyNow}
+            onClick={handleViewProduct}
             className="flex-1 bg-sage/90 backdrop-blur-sm text-white text-sm py-3 flex items-center justify-center gap-1.5 hover:bg-sage transition-colors"
           >
-            <Zap size={13} /> Buy Now
+            <Eye size={13} /> View
           </button>
         </div>
       </div>
