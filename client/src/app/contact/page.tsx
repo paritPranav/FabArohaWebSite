@@ -24,8 +24,8 @@ export default function ContactPage() {
           {
             icon: Mail,
             title: 'Email Us',
-            value: 'hello@fabaroha.in',
-            href: 'mailto:hello@fabaroha.in',
+            value: 'fabaroha@gmail.com',
+            href: 'mailto:fabaroha@gmail.com',
             sub: 'We reply within 24 hours',
           },
           {

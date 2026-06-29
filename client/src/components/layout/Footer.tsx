@@ -35,7 +35,7 @@ export default function Footer() {
                 className="w-9 h-9 rounded-full bg-cream-200 flex items-center justify-center text-stone-400 hover:bg-sage hover:text-white transition-all">
                 <Twitter size={15} />
               </a>
-              <a href="mailto:hello@fabaroha.in"
+              <a href="mailto:fabaroha@gmail.com"
                 className="w-9 h-9 rounded-full bg-cream-200 flex items-center justify-center text-stone-400 hover:bg-sage hover:text-white transition-all">
                 <Mail size={15} />
               </a>

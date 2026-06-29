@@ -103,7 +103,7 @@ export default function SizeGuidePage() {
 
       <p className="text-xs text-stone-400 mt-6 text-center">
         Still unsure? Email us at{' '}
-        <a href="mailto:hello@fabaroha.in" className="text-bark hover:underline">hello@fabaroha.in</a>
+        <a href="mailto:fabaroha@gmail.com" className="text-bark hover:underline">fabaroha@gmail.com</a>
         {' '}and we'll help you find your fit.
       </p>
     </div>

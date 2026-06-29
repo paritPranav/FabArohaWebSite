@@ -371,7 +371,7 @@ function generateInvoicePDF(order, user) {
       doc.save().fillColor(TEXT_MUTED).font('Helvetica').fontSize(7.5)
          .text('This is a computer-generated invoice and does not require a signature.', MARGIN, footerY + 8, { align: 'center', width: COL_W }).restore();
       doc.save().fillColor(TEXT_MUTED).font('Helvetica').fontSize(7.5)
-         .text('FabAroha · hello@fabaroha.in · fabaroha.com', MARGIN, footerY + 22, { align: 'center', width: COL_W }).restore();
+         .text('FabAroha · fabaroha@gmail.com · fabaroha.com', MARGIN, footerY + 22, { align: 'center', width: COL_W }).restore();
       doc.save().fillColor(BRAND_BROWN).font('Helvetica-Bold').fontSize(8)
          .text('Thank you for shopping with FabAroha!', MARGIN, footerY + 38, { align: 'center', width: COL_W }).restore();
 

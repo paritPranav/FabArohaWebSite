@@ -72,7 +72,7 @@ function baseTemplate(content) {
           <td style="padding:20px 0;text-align:center;">
             <p style="font-size:11px;color:#B0A09A;margin:0;">
               &copy; ${new Date().getFullYear()} FabAroha &mdash; Style, Comfort &amp; Elegance<br/>
-              Questions? Email us at <a href="mailto:hello@fabaroha.in" style="color:#8FAF89;">hello@fabaroha.in</a>
+              Questions? Email us at <a href="mailto:fabaroha@gmail.com" style="color:#8FAF89;">fabaroha@gmail.com</a>
             </p>
           </td>
         </tr>
