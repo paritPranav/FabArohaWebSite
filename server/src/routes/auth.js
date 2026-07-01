@@ -196,9 +196,10 @@ router.post('/send-otp', async (req, res, next) => {
     if (twofactorKey) {
       // 2Factor.in — simplest OTP API, no DLT or website verification needed
       try {
-        console.log(`[OTP:send-otp] 2FACTOR  calling API for ${digits}`);
+        const dialNumber = `91${digits}`;
+        console.log(`[OTP:send-otp] 2FACTOR  calling API for ${dialNumber}`);
         const smsRes = await axios.get(
-          `https://2factor.in/API/V1/${twofactorKey}/SMS/${digits}/${otp}/OTP1`,
+          `https://2factor.in/API/V1/${twofactorKey}/SMS/${dialNumber}/${otp}/OTP1`,
           { timeout: 10000 }
         );
         console.log('[OTP:send-otp] 2FACTOR_RESPONSE  status=%d data=%s', smsRes.status, JSON.stringify(smsRes.data));
