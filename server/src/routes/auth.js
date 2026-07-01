@@ -156,21 +156,28 @@ router.post('/send-otp', async (req, res, next) => {
   try {
     const { phone } = req.body;
     const digits = String(phone || '').replace(/\D/g, '');
+    console.log(`[OTP:send-otp] REQUEST  phone_raw="${phone}" digits="${digits}"`);
+
     if (digits.length !== 10) {
+      console.warn(`[OTP:send-otp] REJECTED  invalid phone digits.length=${digits.length}`);
       return res.status(400).json({ success: false, message: 'Enter a valid 10-digit mobile number' });
     }
 
     // Generate 6-digit OTP
     const otp        = String(Math.floor(100000 + Math.random() * 900000));
     const otpExpiry  = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    console.log(`[OTP:send-otp] GENERATED  otp=${otp} expires=${otpExpiry.toISOString()}`);
 
     // Upsert: find existing user or prepare a placeholder (verified on verify-otp)
     let user = await User.findOne({ phone: digits });
     if (user) {
+      console.log(`[OTP:send-otp] USER_FOUND  id=${user._id} name="${user.name}" isBlocked=${user.isBlocked}`);
       user.otp          = otp;
       user.otpExpiresAt = otpExpiry;
       await user.save();
+      console.log(`[OTP:send-otp] OTP_SAVED  (existing user)`);
     } else {
+      console.log(`[OTP:send-otp] USER_NOT_FOUND  creating pending user`);
       // Store OTP temporarily — user will be created on verify
       // Use a minimal doc; will be fleshed out on verification
       user = await User.findOneAndUpdate(
@@ -178,36 +185,40 @@ router.post('/send-otp', async (req, res, next) => {
         { $set: { otp, otpExpiresAt: otpExpiry, name: 'pending', password: crypto.randomBytes(20).toString('hex') } },
         { upsert: true, new: true }
       );
+      console.log(`[OTP:send-otp] OTP_SAVED  (new pending user id=${user._id})`);
     }
 
     // ── Send SMS ─────────────────────────────────────────────────────────────
     const twofactorKey = process.env.TWOFACTOR_API_KEY;
     const fast2smsKey  = process.env.FAST2SMS_API_KEY;
+    console.log(`[OTP:send-otp] SMS_PROVIDER  twofactor=${!!twofactorKey} fast2sms=${!!fast2smsKey}`);
 
     if (twofactorKey) {
       // 2Factor.in — simplest OTP API, no DLT or website verification needed
       try {
+        console.log(`[OTP:send-otp] 2FACTOR  calling API for ${digits}`);
         const smsRes = await axios.get(
           `https://2factor.in/API/V1/${twofactorKey}/SMS/${digits}/${otp}/OTP1`,
           { timeout: 10000 }
         );
-        console.log('[2Factor]', JSON.stringify(smsRes.data));
+        console.log('[OTP:send-otp] 2FACTOR_RESPONSE  status=%d data=%s', smsRes.status, JSON.stringify(smsRes.data));
         if (smsRes.data?.Status === 'Error') throw new Error(smsRes.data.Details);
       } catch (smsErr) {
-        console.error('[2Factor error]', smsErr.message);
+        console.error('[OTP:send-otp] 2FACTOR_ERROR  message="%s" response=%s', smsErr.message, JSON.stringify(smsErr.response?.data));
         return res.status(502).json({ success: false, message: `SMS error: ${smsErr.message}` });
       }
     } else if (fast2smsKey) {
       // Fast2SMS (requires website verification in dashboard first)
       try {
+        console.log(`[OTP:send-otp] FAST2SMS  calling API for ${digits}`);
         const smsRes = await axios.get('https://www.fast2sms.com/dev/bulkV2', {
           params: { authorization: fast2smsKey, variables_values: otp, route: 'otp', numbers: digits },
           timeout: 10000,
         });
-        console.log('[Fast2SMS]', JSON.stringify(smsRes.data));
+        console.log('[OTP:send-otp] FAST2SMS_RESPONSE  status=%d data=%s', smsRes.status, JSON.stringify(smsRes.data));
       } catch (smsErr) {
         const smsBody = smsErr.response?.data;
-        console.error('[Fast2SMS error]', JSON.stringify(smsBody));
+        console.error('[OTP:send-otp] FAST2SMS_ERROR  message="%s" response=%s', smsErr.message, JSON.stringify(smsBody));
         const msg = smsBody?.message?.[0] || smsBody?.message || smsErr.message || 'SMS delivery failed';
         return res.status(502).json({ success: false, message: `SMS error: ${msg}` });
       }
@@ -218,8 +229,10 @@ router.post('/send-otp', async (req, res, next) => {
       console.log(`[DEV] ============================\n`);
     }
 
+    console.log(`[OTP:send-otp] SUCCESS  OTP sent to ${digits}`);
     res.json({ success: true, message: `OTP sent to ${digits}` });
   } catch (err) {
+    console.error('[OTP:send-otp] UNHANDLED_ERROR  message="%s" stack=%s', err.message, err.stack);
     next(err);
   }
 });
@@ -231,30 +244,42 @@ router.post('/verify-otp', async (req, res, next) => {
   try {
     const { phone, otp, name, email } = req.body;
     const digits = String(phone || '').replace(/\D/g, '');
+    console.log(`[OTP:verify-otp] REQUEST  phone_raw="${phone}" digits="${digits}" otp_provided=${!!otp} name="${name}" email="${email}"`);
 
     if (!digits || !otp) {
+      console.warn(`[OTP:verify-otp] REJECTED  missing digits=${!digits} otp=${!otp}`);
       return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
     }
 
     const user = await User.findOne({ phone: digits });
+    console.log(`[OTP:verify-otp] USER_LOOKUP  found=${!!user} hasOtp=${!!user?.otp} isBlocked=${user?.isBlocked}`);
+
     if (!user || !user.otp) {
+      console.warn(`[OTP:verify-otp] REJECTED  user_not_found_or_no_otp`);
       return res.status(400).json({ success: false, message: 'OTP not sent or expired. Please request again.' });
     }
 
-    if (user.otpExpiresAt < new Date()) {
+    const now = new Date();
+    console.log(`[OTP:verify-otp] OTP_CHECK  stored="${user.otp}" provided="${String(otp)}" expiresAt=${user.otpExpiresAt?.toISOString()} now=${now.toISOString()} expired=${user.otpExpiresAt < now}`);
+
+    if (user.otpExpiresAt < now) {
+      console.warn(`[OTP:verify-otp] REJECTED  otp_expired`);
       return res.status(400).json({ success: false, message: 'OTP expired. Please request a new one.' });
     }
 
     if (user.otp !== String(otp)) {
+      console.warn(`[OTP:verify-otp] REJECTED  otp_mismatch stored="${user.otp}" provided="${String(otp)}"`);
       return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
     }
 
     // OTP valid — clear it
     const isNewUser = user.name === 'pending';
+    console.log(`[OTP:verify-otp] OTP_VALID  isNewUser=${isNewUser}`);
 
     if (isNewUser) {
       if (!name?.trim()) {
         // Signal client to ask for name
+        console.log(`[OTP:verify-otp] NEEDS_NAME  returning needsName=true`);
         return res.json({ success: true, isNewUser: true, needsName: true });
       }
       user.name = name.trim();
@@ -267,11 +292,13 @@ router.post('/verify-otp', async (req, res, next) => {
     user.otp          = undefined;
     user.otpExpiresAt = undefined;
     if (user.isBlocked) {
+      console.warn(`[OTP:verify-otp] REJECTED  account_blocked id=${user._id}`);
       return res.status(403).json({ success: false, message: 'Account blocked. Contact support.' });
     }
     await user.save();
 
     const token = generateToken(user._id, user.role);
+    console.log(`[OTP:verify-otp] SUCCESS  id=${user._id} name="${user.name}" isNewUser=${isNewUser} role=${user.role}`);
 
     res.json({
       success: true,
@@ -280,6 +307,7 @@ router.post('/verify-otp', async (req, res, next) => {
       user: { _id: user._id, name: user.name, phone: user.phone, email: user.email, role: user.role, avatar: user.avatar },
     });
   } catch (err) {
+    console.error('[OTP:verify-otp] UNHANDLED_ERROR  message="%s" stack=%s', err.message, err.stack);
     next(err);
   }
 });
